@@ -4,3 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+libc = "0.2"
+
+[lib]
+name = "rlibc"
+crate-type = ["cdylib"]
+no-std = true
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

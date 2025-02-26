@@ -1,1 +1,9 @@
 /target
+
+**/*.rs.bk
+
+.vscode/
+
+*.log
+
+target/
