@@ -122,7 +122,7 @@ pub extern "C" fn a_cas_p(p: *mut *mut c_void, t: *mut c_void, s: *mut c_void) -
 pub extern "C" fn a_ctz_64(mut x: u64) -> c_int {
     unsafe {
         asm!(
-            "rbit {0}, {1}",
+            "rbit {0}, {0}",
             inout(reg) x => x,
             options(nostack)
         );
