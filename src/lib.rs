@@ -4,6 +4,7 @@ use core::panic::PanicInfo;
 use libc;
 
 pub mod thread;
+pub mod arch;
 
 #[cfg(not(test))]
 #[panic_handler]
