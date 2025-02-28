@@ -1,1 +1,1 @@
-mod pthread;
+pub mod pthread;
