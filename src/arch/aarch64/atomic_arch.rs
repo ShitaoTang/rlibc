@@ -9,7 +9,7 @@ pub extern "C" fn a_ll(p: *const c_int) -> c_int {
     let mut v: c_int;
     unsafe {
         asm!(
-            "ldaxr {0}, {1}",
+            "ldaxr {0:w}, {1}",
             out(reg) v,
             in(reg) p,
             options(nostack)
@@ -25,7 +25,7 @@ pub extern "C" fn a_sc(p: *mut c_int, v: c_int) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr {0}, {2}, {1}",
+            "stlxr {0:w}, {2:w}, {1}",
             lateout(reg) r,
             in(reg) v,
             in(reg) p,
@@ -88,7 +88,7 @@ pub extern "C" fn a_sc_p(p: *mut *mut c_void, v: *mut c_void) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr {0}, {2}, {1}",
+            "stlxr {0:w}, {2}, {1}",
             lateout(reg) r,
             in(reg) v,
             in(reg) p,
