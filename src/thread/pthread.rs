@@ -3,6 +3,7 @@ use core::arch::asm;
 use core::sync::atomic::{AtomicI32, AtomicU8, AtomicPtr, Ordering};
 use core::option::Option;
 use core::ptr;
+use crate::arch::aarch64::syscall_arch::{self, *};
 
 
 #[repr(C)]
@@ -149,6 +150,13 @@ pub const __SU: usize = 1;
 
 pub const TP_OFFSET: usize = 0;
 
+pub const _NSIG: usize = 65;
+#[cfg(target_pointer_width = "64")]
+pub const SIGPT_SET_VALUE: [c_ulong; _NSIG/8/8] = [3u64 << 32];
+#[cfg(target_pointer_width = "32")]
+pub static SIGPT_SET_VALUE: [c_ulong; _NSIG/8/4] = [0, 3u64];
+pub const SIGPT_SET: *const sigset_t = SIGPT_SET_VALUE.as_ptr() as *const sigset_t;
+
 impl pthread_attr_t {
     pub fn _a_stacksize(&self) -> c_ulong {unsafe {self.__u.__s[0]}}
     pub fn _a_guardsize(&self) -> c_ulong {unsafe {self.__u.__s[1]}}
@@ -269,7 +277,17 @@ pub extern "C" fn pthread_create(ret: *mut pthread_t, attrp: *const pthread_attr
 
     _self = pthread_self();
 
-    
+    unsafe {
+        __syscall4(libc::SYS_rt_sigprocmask, libc::SIG_UNBLOCK as c_long, SIGPT_SET as c_long, 0 as c_long, (_NSIG/8) as c_long);
+    }
+
+    unsafe {
+        __syscall2(libc::SYS_membarrier, libc::MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED as c_long, 0 as c_long);
+    }
+
+    if attrp.is_null() {
+        attr = unsafe {ptr::read_volatile(attrp)};
+    }
     
     0
 }
