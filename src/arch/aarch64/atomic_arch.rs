@@ -9,7 +9,7 @@ pub extern "C" fn a_ll(p: *const c_int) -> c_int {
     let mut v: c_int;
     unsafe {
         asm!(
-            "ldaxr {0:w}, {1}",
+            "ldaxr {0:w}, [{1}]",
             out(reg) v,
             in(reg) p,
             options(nostack)
