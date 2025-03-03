@@ -2,37 +2,40 @@ use core::arch::asm;
 use libc::c_int;
 use libc::c_void;
 
-// Load-Exclusive
+// Load-Acquire Exclusive Register
+// v <- *p
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn a_ll(p: *const c_int) -> c_int {
+pub extern "C" fn a_ll(p: *mut c_int) -> c_int {
     let mut v: c_int;
     unsafe {
         asm!(
             "ldaxr {0:w}, [{1}]",
             out(reg) v,
             in(reg) p,
-            options(nostack)
+            options(nostack, pure, readonly)
         );
     }
     v
 }
 
-// Store-Exclusive
+// Store-Release Exclusive Register
+// *p <- v
+// r <- 1 if successful, 0 otherwise
 #[inline(always)]
 #[no_mangle]
 pub extern "C" fn a_sc(p: *mut c_int, v: c_int) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr {0:w}, {2:w}, {1}",
+            "stlxr {0:w}, {2:w}, [{1}]",
             lateout(reg) r,
-            in(reg) v,
             in(reg) p,
+            in(reg) v,
             options(nostack)
         );
     }
-    if r == 0 { 1 } else { 0 }
+    (r == 0) as c_int
 }
 
 // Memory Barrier
@@ -48,6 +51,8 @@ pub extern "C" fn a_barrier() {
 }
 
 // Compare-and-Swap (CAS)
+// *p <- s if *p == t
+// Returns the old value of *p
 #[inline(always)]
 #[no_mangle]
 pub extern "C" fn a_cas(p: *mut c_int, t: c_int, s: c_int) -> c_int {
@@ -65,17 +70,17 @@ pub extern "C" fn a_cas(p: *mut c_int, t: c_int, s: c_int) -> c_int {
     old
 }
 
-// Load-Exclusive for Pointers
+// Load-Acquire Exclusive Register (Pointer version)
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn a_ll_p(p: *const *mut c_void) -> *mut c_void {
+pub extern "C" fn a_ll_p(p: *mut *mut c_void) -> *mut c_void {
     let mut v: *mut c_void;
     unsafe {
         asm!(
-            "ldaxr {0}, {1}",
+            "ldaxr {0}, [{1}]",
             out(reg) v,
             in(reg) p,
-            options(nostack)
+            options(nostack, pure, readonly)
         );
     }
     v
@@ -88,17 +93,17 @@ pub extern "C" fn a_sc_p(p: *mut *mut c_void, v: *mut c_void) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr {0:w}, {2}, {1}",
+            "stlxr {0:w}, {2}, [{1}]",
             lateout(reg) r,
-            in(reg) v,
             in(reg) p,
+            in(reg) v,
             options(nostack)
         );
     }
-    if r == 0 { 1 } else { 0 }
+    (r == 0) as c_int
 }
 
-// Compare-and-Swap for Pointers (CAS)
+// Compare-And-Swap (CAS for Pointer version)
 #[inline(always)]
 #[no_mangle]
 pub extern "C" fn a_cas_p(p: *mut *mut c_void, t: *mut c_void, s: *mut c_void) -> *mut c_void {
@@ -123,12 +128,12 @@ pub extern "C" fn a_ctz_64(mut x: u64) -> c_int {
     unsafe {
         asm!(
             "rbit {0}, {0}",
-            inout(reg) x => x,
+            inout(reg) x,
             options(nostack)
         );
         asm!(
             "clz {0}, {0}",
-            out(reg) x,
+            inout(reg) x,
             options(nostack)
         );
     }
@@ -141,9 +146,8 @@ pub extern "C" fn a_ctz_64(mut x: u64) -> c_int {
 pub extern "C" fn a_clz_64(mut x: u64) -> c_int {
     unsafe {
         asm!(
-            "clz {0}, {1}",
-            out(reg) x,
-            in(reg) x,
+            "clz {0}, {0}",
+            inout(reg) x,
             options(nostack)
         );
     }
