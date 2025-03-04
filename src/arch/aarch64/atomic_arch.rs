@@ -153,3 +153,11 @@ pub extern "C" fn a_clz_64(mut x: u64) -> c_int {
     }
     x as c_int
 }
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_store(p: *mut c_int, v: c_int) {
+    a_barrier();
+    unsafe {*p = v;}
+    a_barrier();
+}
