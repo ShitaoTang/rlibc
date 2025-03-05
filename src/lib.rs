@@ -13,3 +13,6 @@ fn panic(_info: &PanicInfo) -> ! {
         libc::abort();
     }
 }
+
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {}
