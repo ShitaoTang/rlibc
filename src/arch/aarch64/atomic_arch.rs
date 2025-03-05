@@ -28,10 +28,10 @@ pub extern "C" fn a_sc(p: *mut c_int, v: c_int) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr {0:w}, {2:w}, [{1}]",
-            lateout(reg) r,
-            in(reg) p,
-            in(reg) v,
+            "stlxr w9, w10, [x11]",
+            out("w9") r,
+            in("x11") p,
+            in("w10") v,
             options(nostack)
         );
     }
@@ -93,10 +93,10 @@ pub extern "C" fn a_sc_p(p: *mut *mut c_void, v: *mut c_void) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr {0:w}, {2}, [{1}]",
-            lateout(reg) r,
-            in(reg) p,
-            in(reg) v,
+            "stlxr w9, w10, [x11]",
+            out("w9") r,
+            in("x11") p,
+            in("w10") v,
             options(nostack)
         );
     }
@@ -160,4 +160,29 @@ pub extern "C" fn a_store(p: *mut c_int, v: c_int) {
     a_barrier();
     unsafe {*p = v;}
     a_barrier();
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_fetch_add(p: *mut c_int, v: c_int) -> c_int {
+    let mut old: c_int;
+    loop {
+        old = a_ll(p);
+        if a_sc(p, (old as u32 + v as u32) as c_int) != 0 {
+            break;
+        }
+    }
+    old
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_inc(p: *mut c_int) {
+    a_fetch_add(p, 1);
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_dec(p: *mut c_int) {
+    a_fetch_add(p, -1);
 }
