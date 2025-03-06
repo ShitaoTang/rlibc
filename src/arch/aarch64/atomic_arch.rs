@@ -28,10 +28,10 @@ pub extern "C" fn a_sc(p: *mut c_int, v: c_int) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr w9, w10, [x11]",
-            out("w9") r,
-            in("x11") p,
-            in("w10") v,
+            "stlxr {r:w}, {v:w}, [{p}]",
+            r = out(reg) r,
+            p = in(reg) p,
+            v = in(reg) v,
             options(nostack)
         );
     }
@@ -60,14 +60,12 @@ pub extern "C" fn a_cas(p: *mut c_int, t: c_int, s: c_int) -> c_int {
     loop {
         old = a_ll(p);
         if old != t {
-            a_barrier();
-            break;
+            continue; // 重试直到匹配
         }
         if a_sc(p, s) != 0 {
-            break;
+            return old; // 成功写入，返回旧值
         }
     }
-    old
 }
 
 // Load-Acquire Exclusive Register (Pointer version)
@@ -93,10 +91,10 @@ pub extern "C" fn a_sc_p(p: *mut *mut c_void, v: *mut c_void) -> c_int {
     let mut r: c_int;
     unsafe {
         asm!(
-            "stlxr w9, w10, [x11]",
-            out("w9") r,
-            in("x11") p,
-            in("w10") v,
+            "stlxr {r:w}, {v:w}, [{p}]",
+            r = out(reg) r,
+            p = in(reg) p,
+            v = in(reg) v,
             options(nostack)
         );
     }
