@@ -168,7 +168,9 @@ pub extern "C" fn a_fetch_add(p: *mut c_int, v: c_int) -> c_int {
     let mut old: c_int;
     loop {
         old = a_ll(p);
-        if a_sc(p, (old as u32 + v as u32) as c_int) != 0 {
+        // 使用wrapping_add避免溢出panic
+        let new = (old as u32).wrapping_add(v as u32) as c_int;
+        if a_sc(p, new) != 0 {
             break;
         }
     }
