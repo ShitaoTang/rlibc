@@ -426,7 +426,7 @@ pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int 
             return success(m, old, lock_type, ptr::addr_of_mut!(_self));
         }
 
-        if (lock_type & 3) == libc::PTHREAD_MUTEX_NORMAL {
+        if (lock_type & 3) == libc::PTHREAD_MUTEX_RECURSIVE {
             if unsafe{(*m)._m_count() as c_uint >= 0x7fffffff as c_uint} {
                 return libc::EAGAIN;
             }
