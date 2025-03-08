@@ -60,10 +60,10 @@ pub extern "C" fn a_cas(p: *mut c_int, t: c_int, s: c_int) -> c_int {
     loop {
         old = a_ll(p);
         if old != t {
-            continue; // 重试直到匹配
+            continue; // retry until *p == t
         }
         if a_sc(p, s) != 0 {
-            return old; // 成功写入，返回旧值
+            return old;
         }
     }
 }
@@ -166,7 +166,7 @@ pub extern "C" fn a_fetch_add(p: *mut c_int, v: c_int) -> c_int {
     let mut old: c_int;
     loop {
         old = a_ll(p);
-        // 使用wrapping_add避免溢出panic
+        // using wrapping_add to avoid overflow
         let new = (old as u32).wrapping_add(v as u32) as c_int;
         if a_sc(p, new) != 0 {
             break;
@@ -185,4 +185,17 @@ pub extern "C" fn a_inc(p: *mut c_int) {
 #[no_mangle]
 pub extern "C" fn a_dec(p: *mut c_int) {
     a_fetch_add(p, -1);
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_swap(p: *mut c_int, v: c_int) -> c_int {
+    let mut old: c_int;
+    loop {
+        old = a_ll(p);
+        if a_sc(p, v) != 0 {
+            break;
+        }
+    }
+    old
 }
