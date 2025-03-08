@@ -50,6 +50,7 @@ pub extern "C" fn a_barrier() {
     }
 }
 
+// This version is like "spin", but it works???
 // Compare-and-Swap (CAS)
 // *p <- s if *p == t
 // Returns the old value of *p
@@ -67,6 +68,28 @@ pub extern "C" fn a_cas(p: *mut c_int, t: c_int, s: c_int) -> c_int {
         }
     }
 }
+
+
+// // This version is real "CAS", but it doesn't work???
+// // Compare-and-Swap (CAS)
+// // *p <- s if *p == t
+// // Returns the old value of *p
+// #[inline(always)]
+// #[no_mangle]
+// pub extern "C" fn a_cas(p: *mut c_int, t: c_int, s: c_int) -> c_int {
+//     let mut old: c_int;
+//     loop {
+//         old = a_ll(p);
+//         if old != t {
+//             a_barrier();
+//             break;
+//         }
+//         if a_sc(p, s) != 0 {
+//             return old;
+//         }
+//     }
+//     old
+// }
 
 // Load-Acquire Exclusive Register (Pointer version)
 #[inline(always)]

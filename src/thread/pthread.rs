@@ -319,12 +319,13 @@ pub extern "C" fn pthread_mutex_init(m: *mut pthread_mutex_t, a: *const pthread_
     }
 
     unsafe {
-        (*m).__u.__i[0] = 0;
-        ptr::write_volatile(&mut (*m).__u.__vi[1], 0);
-        ptr::write_volatile(&mut (*m).__u.__vi[2], 0);
-        ptr::write_volatile(&mut (*m).__u.__p[3], ptr::null_mut());
-        ptr::write_volatile(&mut (*m).__u.__p[4], ptr::null_mut());
-        (*m).__u.__i[5] = 0;
+        ptr::write(m, core::mem::zeroed::<pthread_mutex_t>());
+        assert_eq!((*m).__u.__i[0], 0);
+        assert_eq!(ptr::read_volatile(&(*m).__u.__vi[1]), 0);
+        assert_eq!(ptr::read_volatile(&(*m).__u.__vi[2]), 0);
+        assert_eq!(ptr::read_volatile(&(*m).__u.__p[3]), ptr::null_mut());
+        assert_eq!(ptr::read_volatile(&(*m).__u.__p[4]), ptr::null_mut());
+        assert_eq!((*m).__u.__i[5], 0);
 
         if !a.is_null() {
             (*m).__u.__i[0] = (*a).__attr as c_int;
@@ -395,6 +396,7 @@ pub extern "C" fn pthread_mutex_timedlock(m: *mut pthread_mutex_t, at: *const li
         r = timedwait(unsafe {ptr::addr_of_mut!((*m).__u.__vi[1])}, t, libc::CLOCK_REALTIME, at, lock_priv);
         a_dec(unsafe {ptr::addr_of_mut!((*m).__u.__vi[2])});
         if r != 0 && r != libc::EINTR {break;}
+        r = pthread_mutex_trylock(m);
     }
 
     r
@@ -787,3 +789,174 @@ pub extern "C" fn pthread_spin_destroy(_s: *mut pthread_spinlock_t) -> c_int {
     0
 }
 
+#[repr(C)]
+pub struct pthread_rwlock_t {
+    pub __u: ptrwu,
+}
+
+#[repr(C)]
+pub union ptrwu {
+    #[cfg(target_pointer_width = "64")]
+    pub __i: [c_int; 14],
+    #[cfg(target_pointer_width = "32")]
+    pub __i: [c_int; 8],
+    #[cfg(target_pointer_width = "64")]
+    pub __vi: [c_int; 14],                  // volatile int
+    #[cfg(target_pointer_width = "32")]
+    pub __vi: [c_int; 8],                   // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 7],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 8],              // volatile void *
+}
+
+impl pthread_rwlock_t {
+    pub fn _rw_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[0])}}
+    pub fn _rw_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
+    pub fn _rw_shared(&self) -> c_int {unsafe {self.__u.__i[2]}}
+}
+
+#[repr(C)]
+pub struct pthread_rwlockattr_t {
+    pub __attr: [c_uint; 2],
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_init(rw: *mut pthread_rwlock_t, a: *const pthread_rwlockattr_t) -> c_int {
+    if rw.is_null() {return -1;}
+
+    unsafe {
+        ptr::write(rw, core::mem::zeroed::<pthread_rwlock_t>());
+        assert_eq!(ptr::read_volatile(&(*rw).__u.__vi[0]), 0);
+        assert_eq!(ptr::read_volatile(&(*rw).__u.__vi[1]), 0);
+        assert_eq!((*rw).__u.__i[2], 0);
+    }
+
+    if !a.is_null() {
+        unsafe {(*rw).__u.__i[2] = ((*a).__attr[0] * 128) as c_int;}
+    }
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_rdlock(rw: *mut pthread_rwlock_t) -> c_int {
+    pthread_rwlock_timedrdlock(rw, 0 as *const libc::timespec)
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_timedrdlock(rw: *mut pthread_rwlock_t, at: *const libc::timespec) -> c_int {
+    let mut r: c_int = pthread_rwlock_tryrdlock(rw);
+    if r != libc::EBUSY {return r;}
+
+    let mut spins: c_int = 100;
+    while spins != 0 {
+        if unsafe {(*rw)._rw_lock()} == 0 || unsafe {(*rw)._rw_waiters()} != 0 {
+            break;
+        }
+        a_barrier();
+        spins -= 1;
+    }
+
+    r = pthread_rwlock_tryrdlock(rw);
+    while r == libc::EBUSY {
+        r = unsafe {(*rw)._rw_lock()};
+        if r == 0 || (r & 0x7fffffff)!=0x7fffffff {
+            r = pthread_rwlock_tryrdlock(rw);
+            continue;
+        }
+        let t = r | libc::INT_MIN;
+        a_inc(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[1])});
+        a_cas(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, r, t);
+        r = timedwait(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, t, libc::CLOCK_REALTIME, at, unsafe{(*rw)._rw_shared()}^128);
+        a_dec(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[1])});
+        if r != 0 && r != libc::EINTR {return r;} 
+        r = pthread_rwlock_tryrdlock(rw);
+    }
+
+    r
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_tryrdlock(rw: *mut pthread_rwlock_t) -> c_int {
+    let mut val: c_int;
+    let mut cnt: c_int;
+    loop {
+        val = unsafe {(*rw)._rw_lock()};
+        cnt = val & 0x7fffffff;
+        if cnt == 0x7fffffff {return libc::EBUSY;}
+        if cnt == 0x7ffffffe {return libc::EAGAIN;}
+        if a_cas(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, val, val+1) == val {break;}
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_wrlock(rw: *mut pthread_rwlock_t) -> c_int {
+    pthread_rwlock_timedwrlock(rw, 0 as *const libc::timespec)
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_timedwrlock(rw: *mut pthread_rwlock_t, at: *const libc::timespec) -> c_int {
+    let mut r: c_int = pthread_rwlock_trywrlock(rw);
+    if r != libc::EBUSY {return r;}
+
+    let mut spins: c_int = 100;
+    while spins != 0 {
+        if unsafe {(*rw)._rw_lock()} == 0 || unsafe {(*rw)._rw_waiters()} != 0 {
+            break;
+        }
+        a_barrier();
+        spins -= 1;
+    }
+
+    r = pthread_rwlock_trywrlock(rw);
+    while r == libc::EBUSY {
+        r = unsafe {(*rw)._rw_lock()};
+        if r == 0 {
+            r = pthread_rwlock_trywrlock(rw);
+            continue;
+        }
+        let t = r | libc::INT_MIN;
+        a_inc(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[1])});
+        a_cas(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, r, t);
+        r = timedwait(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, t, libc::CLOCK_REALTIME, at, unsafe{(*rw)._rw_shared()}^128);
+        a_dec(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[1])});
+        if r != 0 && r != libc::EINTR {return r;}
+    }
+
+    r
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_trywrlock(rw: *mut pthread_rwlock_t) -> c_int {
+    if a_cas(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, 0, 0x7fffffff) != 0 {return libc::EBUSY;}
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_rwlock_unlock(rw: *mut pthread_rwlock_t) -> c_int {
+    let mut val: c_int;
+    let mut cnt: c_int;
+    let mut waiters: c_int;
+    let mut new: c_int;
+    let lock_priv: c_int = unsafe{(*rw)._rw_shared()} ^ 128;
+
+    loop {
+        val = unsafe {(*rw)._rw_lock()};
+        cnt = val & 0x7fffffff;
+        waiters = unsafe {(*rw)._rw_waiters()};
+        if cnt == 0x7fffffff || cnt == 1 {
+            new = 0;
+        } else {
+            new = val - 1;
+        }
+        if a_cas(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, val, new) == val {break;}
+    }
+
+    if new == 0 && (waiters != 0 || val < 0) {
+        wake(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, cnt, lock_priv);
+    }
+
+    0
+}
