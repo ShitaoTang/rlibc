@@ -168,13 +168,10 @@ unsafe extern "C" {
     unsafe static mut __eintr_valid_flag: i32;
 }
 
-// 声明 musl 提供的外部符号
 extern "C" {
-    #[no_mangle]
     pub static __vmlock_lockptr: *const c_int;
 }
 
-// 如果你还需要自己的 vmlock，可以保留，但不与 __vmlock_lockptr 绑定
 pub static mut vmlock: [c_int; 2] = [0; 2];
 
 impl pthread_attr_t {
@@ -734,7 +731,7 @@ pub extern "C" fn wait(addr: *mut c_int, waiters: *mut c_int, val: c_int, lock_p
     }
     while unsafe {ptr::read_volatile(waiters)} == val {
         unsafe {
-            __syscall4(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAIT|lock_priv) as c_long, val as c_long, 0 as c_long) != -libc::ENOSYS as c_long
+            let _ = __syscall4(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAIT|lock_priv) as c_long, val as c_long, 0 as c_long) != -libc::ENOSYS as c_long
             || __syscall4(libc::SYS_futex, addr as c_long, libc::FUTEX_WAIT as c_long, val as c_long, 0 as c_long) != 0;
         }
     }
@@ -749,82 +746,10 @@ pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> () {
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
     let cnt = if cnt < 0 { libc::INT_MAX } else { cnt };
     unsafe {
-        __syscall3(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -libc::ENOSYS as c_long
+        let _ = __syscall3(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -libc::ENOSYS as c_long
         || __syscall3(libc::SYS_futex, addr as c_long, libc::FUTEX_WAKE as c_long, cnt as c_long) != 0;
     };
     
 }
 
 
-// #[no_mangle]
-// pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int {
-//     if m.is_null() {return;}
-//     let mut _self: pthread_t = pthread_self();
-//     let mut waiters: c_int = unsafe {(*m)._m_waiters()};
-//     let mut cont: c_int;
-//     let lock_type: c_int = unsafe {(*m)._m_type()} & 15;
-//     let mut lock_priv: c_int = (unsafe {(*m)._m_type()} & 128) ^ 128;
-//     let mut new: c_int;
-//     let mut old: c_int;
-
-//     if lock_type != libc::PTHREAD_MUTEX_NORMAL {
-//         old = unsafe {(*m)._m_lock()};
-//         let own = old & 0x3fffffff;
-//         if own != unsafe {(*_self).tid} { return libc::EPERM; }
-//         if lock_type&3 == libc::PTHREAD_MUTEX_ERRORCHECK && unsafe {(*m)._m_count()} != 0 {
-//             unsafe {(*m).__u.__i[5] -= 1;}
-//             return 0;
-//         }
-//         if lock_type&4 != 0 && (old&0x40000000) != 0 {new = 0x7fffffff;}
-//         if lock_priv == 0 {
-//             unsafe {
-//                 ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.head), ptr::read_volatile(ptr::addr_of_mut!((*m).__u.__p[4])));
-//                 vm_lock();
-//             }
-//         }
-
-//     } 
-
-//     0
-// }
-
-/* 
-#[no_mangle]
-#[allow(unused_variables)]
-#[allow(unused_mut)]
-pub extern "C" fn pthread_create(ret: *mut pthread_t, attrp: *const pthread_attr_t, entry: extern "C" fn(*mut c_void), arg: *mut c_void) -> c_int {
-    let mut ret: c_int = 0;
-    let mut size: size_t = 0;
-    let mut guard: size_t = 0;
-    let mut _self: pthread_t = ptr::null_mut();
-    let mut new: pthread_t = ptr::null_mut();
-    let mut map: *mut c_uchar = ptr::null_mut();
-    let mut stack: *mut c_uchar = ptr::null_mut();
-    let mut tsd: *mut c_uchar = ptr::null_mut();
-    let mut stack_limit: *mut c_uchar = ptr::null_mut();
-    let flags: u32 = (libc::CLONE_VM | libc::CLONE_FS | libc::CLONE_FILES | libc::CLONE_SIGHAND
-         | libc::CLONE_THREAD | libc::CLONE_SYSVSEM | libc::CLONE_SETTLS 
-         | libc::CLONE_PARENT_SETTID | libc::CLONE_CHILD_CLEARTID | libc::CLONE_DETACHED) as u32;
-    #[cfg(target_pointer_width = "64")]
-    let mut attr: pthread_attr_t = pthread_attr_t {__u: ptau {__s: [0; 7]}};
-    #[cfg(target_pointer_width = "32")]
-    let mut attr: pthread_attr_t = pthread_attr_t {__u: ptau {__s: [0; 9]}};
-    let mut set: sigset_t;
-
-    _self = pthread_self();
-
-    unsafe {
-        __syscall4(libc::SYS_rt_sigprocmask, libc::SIG_UNBLOCK as c_long, SIGPT_SET as c_long, 0 as c_long, (_NSIG/8) as c_long);
-    }
-
-    unsafe {
-        __syscall2(libc::SYS_membarrier, libc::MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED as c_long, 0 as c_long);
-    }
-
-    if attrp.is_null() {
-        attr = unsafe {ptr::read_volatile(attrp)};
-    }
-    
-    0
-}
-    */

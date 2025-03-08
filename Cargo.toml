@@ -9,7 +9,6 @@ libc = "0.2"
 [lib]
 name = "rlibc"
 crate-type = ["staticlib"]
-no-std = true
 
 [profile.dev]
 panic = "abort"

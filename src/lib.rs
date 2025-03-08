@@ -1,7 +1,8 @@
 #![no_std]
+#![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
 
 use core::panic::PanicInfo;
-use libc;
 
 pub mod thread;
 pub mod arch;
