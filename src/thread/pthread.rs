@@ -752,4 +752,38 @@ pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> () {
     
 }
 
+type pthread_spinlock_t = c_int;
+
+#[no_mangle]
+pub extern "C" fn pthread_spin_init(s: *mut pthread_spinlock_t, _pshared: c_int) -> c_int {
+    unsafe {*s = 0;}
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_spin_lock(s: *mut pthread_spinlock_t) -> c_int {
+    unsafe {
+        while ptr::read_volatile(s) != 0 || a_cas(s, 0, libc::EBUSY) != 0 {
+            a_barrier();
+        }
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_spin_trylock(s: *mut pthread_spinlock_t) -> c_int {
+    a_cas(s, 0, libc::EBUSY);
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_spin_unlock(s: *mut pthread_spinlock_t) -> c_int {
+    a_store(s, 0);
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_spin_destroy(_s: *mut pthread_spinlock_t) -> c_int {
+    0
+}
 
