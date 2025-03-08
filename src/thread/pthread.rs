@@ -1,3 +1,4 @@
+use libc::PTHREAD_MUTEX_NORMAL;
 use libc::{uintptr_t, c_int, c_uchar, c_void, size_t, c_long, c_char, c_ulong, sigset_t, c_uint};
 use core::arch::asm;
 use core::option::Option;
@@ -163,8 +164,18 @@ pub const PTHREAD_CANCEL_MASKED:c_int = 2;
 pub const FUTEX_PRIVATE: c_int = 128;
 
 unsafe extern "C" {
+    #[link_name = "__eintr_valid_flag"]
     unsafe static mut __eintr_valid_flag: i32;
 }
+
+// 声明 musl 提供的外部符号
+extern "C" {
+    #[no_mangle]
+    pub static __vmlock_lockptr: *const c_int;
+}
+
+// 如果你还需要自己的 vmlock，可以保留，但不与 __vmlock_lockptr 绑定
+pub static mut vmlock: [c_int; 2] = [0; 2];
 
 impl pthread_attr_t {
     pub fn _a_stacksize(&self) -> c_ulong {unsafe {self.__u.__s[0]}}
@@ -626,6 +637,124 @@ pub extern "C" fn pthread_mutex_timedlock_pi(m: *mut pthread_mutex_t, at: *const
 
     e
 }
+
+#[no_mangle]
+pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int {
+    let mut _self: pthread_t = pthread_self();
+    let mut waiters: c_int = unsafe {(*m)._m_waiters()};
+    let cont: c_int;
+    let lock_type: c_int = unsafe {(*m)._m_type()} & 15;
+    let lock_priv: c_int = (unsafe {(*m)._m_type()} & 128) ^ 128;
+    let mut new: c_int = 0;
+    let mut old: c_int = 0;
+
+    if lock_type != libc::PTHREAD_MUTEX_NORMAL {
+        old = unsafe {(*m)._m_lock()};
+        let own = old & 0x3fffffff;
+        if own != unsafe {(*_self).tid} { return libc::EPERM; }
+        if lock_type&3 == libc::PTHREAD_MUTEX_RECURSIVE && unsafe {(*m)._m_count()} != 0 {
+            unsafe {(*m).__u.__i[5] -= 1;}
+            return 0;
+        }
+        if lock_type&4 != 0 && (old&0x40000000) != 0 {new = 0x7fffffff;}
+        if lock_priv == 0 {
+            unsafe {
+                ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.head), ptr::read_volatile(ptr::addr_of_mut!((*m).__u.__p[4])));
+                vm_lock();
+            }
+        }
+        let mut prev: *mut c_void = unsafe {(*m).__u.__p[3]};    
+        let next: *mut c_void = unsafe {(*m).__u.__p[4]};
+        unsafe {
+            ptr::write_volatile(ptr::addr_of_mut!(prev), next);
+        }
+
+        if next != unsafe { ptr::read_volatile(ptr::addr_of_mut!((*_self).robust_list.head)) } {
+            unsafe {
+                *((next as *mut u8).offset(-(core::mem::size_of::<*mut c_void>() as isize))
+                as *mut *mut c_void) = ptr::read_volatile(ptr::addr_of_mut!(prev));
+            }
+        }
+    }
+
+    if lock_type&8 != 0 {
+        if old<0 || a_cas(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, old, new) != old {
+            if new != 0 {a_store(unsafe{ptr::addr_of_mut!((*m).__u.__vi[2])}, -1);}
+            unsafe {__syscall2(libc::SYS_futex, ptr::addr_of_mut!((*m).__u.__vi[1]) as c_long, (libc::FUTEX_UNLOCK_PI | lock_priv) as c_long);}
+        }
+        cont = 0;
+        waiters = 0;
+    } else {
+        cont = a_swap(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, new);
+    }
+    if lock_priv != PTHREAD_MUTEX_NORMAL && lock_priv == 0 {
+        unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending), ptr::null_mut())};
+        unsafe {vm_unlock()};
+    }
+    if waiters != 0 || cont < 0 {
+        wake(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, 1, lock_priv);
+    }
+
+    0
+} 
+
+#[no_mangle]
+pub unsafe extern "C" fn vm_wait() -> () {
+    let mut tmp = vmlock[0];
+    loop {
+        wait(ptr::addr_of_mut!(vmlock) as *mut c_int, (ptr::addr_of_mut!(vmlock) as *mut c_int).add(1), tmp, 1);
+        tmp = vmlock[0];
+        if tmp == 0 {break;}
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vm_lock() -> () {
+    a_inc(ptr::addr_of_mut!(vmlock) as *mut c_int);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vm_unlock() -> () {
+    if a_fetch_add(ptr::addr_of_mut!(vmlock) as *mut c_int, -1) == 1 && vmlock[1] != 0 {
+        wake(ptr::addr_of!(vmlock) as *mut c_int, -1, 1);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn wait(addr: *mut c_int, waiters: *mut c_int, val: c_int, lock_priv: c_int) -> () {
+    let mut spins: c_int = 100;
+    let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
+    while spins != 0 && (waiters.is_null() || unsafe {ptr::read_volatile(waiters)} == 0) {
+        spins -= 1;
+        if unsafe {ptr::read_volatile(addr)} != val {
+            a_barrier();
+        } else {
+            return;
+        }
+    }
+    while unsafe {ptr::read_volatile(waiters)} == val {
+        unsafe {
+            __syscall4(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAIT|lock_priv) as c_long, val as c_long, 0 as c_long) != -libc::ENOSYS as c_long
+            || __syscall4(libc::SYS_futex, addr as c_long, libc::FUTEX_WAIT as c_long, val as c_long, 0 as c_long) != 0;
+        }
+    }
+    if unsafe {ptr::read_volatile(waiters)} != 0 {
+        a_dec(waiters);
+    }
+}
+
+#[no_mangle]
+#[inline(always)]
+pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> () {
+    let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
+    let cnt = if cnt < 0 { libc::INT_MAX } else { cnt };
+    unsafe {
+        __syscall3(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -libc::ENOSYS as c_long
+        || __syscall3(libc::SYS_futex, addr as c_long, libc::FUTEX_WAKE as c_long, cnt as c_long) != 0;
+    };
+    
+}
+
 
 // #[no_mangle]
 // pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int {
