@@ -341,7 +341,7 @@ pub extern "C" fn pthread_mutex_lock(m: *mut pthread_mutex_t) -> c_int {
         return -1;
     }
 
-    if ((unsafe{(*m)._m_type()} & 0xFFFF) == libc::PTHREAD_MUTEX_NORMAL)
+    if ((unsafe{(*m)._m_type()} & 15) == libc::PTHREAD_MUTEX_NORMAL)
      && a_cas(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, 0, libc::EBUSY) == 0 {
         return 0;
     }
@@ -923,6 +923,7 @@ pub extern "C" fn pthread_rwlock_timedwrlock(rw: *mut pthread_rwlock_t, at: *con
         r = timedwait(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, t, libc::CLOCK_REALTIME, at, unsafe{(*rw)._rw_shared()}^128);
         a_dec(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[1])});
         if r != 0 && r != libc::EINTR {return r;}
+        r = pthread_rwlock_trywrlock(rw);
     }
 
     r
