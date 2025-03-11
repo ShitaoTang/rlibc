@@ -157,9 +157,11 @@ pub const SIGPT_SET_VALUE: [c_ulong; _NSIG/8/8] = [3u64 << 32];
 pub static SIGPT_SET_VALUE: [c_ulong; _NSIG/8/4] = [0, 3u64];
 pub const SIGPT_SET: *const sigset_t = SIGPT_SET_VALUE.as_ptr() as *const sigset_t;
 
-pub const PTHREAD_CANCEL_ENABLE:c_int = 0;
-pub const PTHREAD_CANCEL_DISABLE:c_int = 1;
-pub const PTHREAD_CANCEL_MASKED:c_int = 2;
+pub const PTHREAD_CANCEL_ENABLE: c_int = 0;
+pub const PTHREAD_CANCEL_DISABLE: c_int = 1;
+pub const PTHREAD_CANCEL_MASKED: c_int = 2;
+
+pub const PTHREAD_CANCELED: *mut c_void = usize::MAX as *mut c_void;
 
 pub const FUTEX_PRIVATE: c_int = 128;
 
@@ -516,7 +518,7 @@ pub extern "C" fn timedwait(uaddr: *mut c_int, val: c_int, clk: libc::clockid_t,
     let r: c_int;
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &mut cs);
-    r = timewait_cp(uaddr, val, clk, at, lock_priv);
+    r = timedwait_cp(uaddr, val, clk, at, lock_priv);
     pthread_setcancelstate(cs, ptr::null_mut());
     r
 }
@@ -531,16 +533,15 @@ pub extern "C" fn pthread_setcancelstate(new: c_int, old: *mut c_int) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn timewait_cp(uaddr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int {
+pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int {
     let mut r: c_int;
     let mut to: libc::timespec = libc::timespec {tv_sec: 0, tv_nsec: 0};
     let mut top: *mut libc::timespec = ptr::null_mut();
-    let mut new_lock_priv = 0;
 
-    if lock_priv != 0 {new_lock_priv = FUTEX_PRIVATE;}
+    let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { 0 };
 
     if at != ptr::null_mut() {
-        if unsafe {(*at).tv_nsec} < 0 || unsafe {(*at).tv_nsec} >= 1000000000 {return libc::EINVAL;}   
+        if unsafe {(*at).tv_nsec} as u64 > 1000000000u64 {return libc::EINVAL;}   
         if clock_gettime(clk, &mut to) != 0 {return libc::EINVAL;}
         to.tv_sec = unsafe {(*at).tv_sec} - to.tv_sec;
         to.tv_nsec = unsafe {(*at).tv_nsec} - to.tv_nsec;
@@ -552,11 +553,8 @@ pub extern "C" fn timewait_cp(uaddr: *mut c_int, val: c_int, clk: libc::clockid_
         top = &mut to;
     }
 
-    if lock_priv == 0 {
-        r = -futex4_cp(uaddr, libc::FUTEX_WAIT|lock_priv, val, top)
-    } else {
-        r = -futex4_cp(uaddr, libc::FUTEX_WAIT|new_lock_priv, val, top);
-    }
+    r = -futex4_cp(addr as *mut c_void, libc::FUTEX_WAIT|lock_priv, val, top);
+
     if r != libc::EINTR && r!= libc::ETIMEDOUT && r != libc::ECANCELED {r = 0;}
     if r == libc::EINTR && unsafe {ptr::read(ptr::addr_of!(__eintr_valid_flag))} == 0 {r = 0;}
 
@@ -582,13 +580,13 @@ pub extern "C" fn clock_gettime(clk: libc::clockid_t, ts: *mut libc::timespec) -
 }
 
 #[no_mangle]
-pub extern "C" fn futex4_cp(uaddr: *mut c_int, op: c_int, val: c_int, to: *const libc::timespec) -> c_int {
+pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int {
     let r: c_int = unsafe {
-        __syscall4(libc::SYS_futex, uaddr as c_long, op as c_long, val as c_long, to as c_long) as c_int
+        __syscall6(libc::SYS_futex, addr as c_long, op as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int
     };
     if r != -libc::ENOSYS {return r;}
-    let tmp = (op as c_long) & !(FUTEX_PRIVATE as c_long);
-    unsafe {__syscall4(libc::SYS_futex, uaddr as c_long, tmp, val as c_long, to as c_long) as c_int}
+    let tmp = (op as c_int) & !(FUTEX_PRIVATE as c_int);
+    unsafe {__syscall6(libc::SYS_futex, addr as c_long, tmp as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int}
 }
 
 #[no_mangle]
@@ -960,4 +958,281 @@ pub extern "C" fn pthread_rwlock_unlock(rw: *mut pthread_rwlock_t) -> c_int {
     }
 
     0
+}
+
+#[repr(C)]
+pub struct pthread_cond_t {
+    pub __u: ptcu,
+}
+
+#[repr(C)]
+pub union ptcu {
+    pub __i: [c_int; 12],
+    pub __vi: [c_int; 12],                  // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 6],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 12],              // volatile void *
+}
+
+impl pthread_cond_t {
+    pub fn _c_shared(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[0])}}
+    pub fn _c_seq(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[2])}}
+    pub fn _c_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
+    pub fn _c_clock(&self) -> c_int {unsafe {self.__u.__i[4]}}
+    pub fn _c_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[8])}}
+    pub fn _c_head(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[1])}}
+    pub fn _c_tail(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[5])}}
+}
+
+#[repr(C)]
+pub struct pthread_condattr_t {
+    pub __attr: c_uint,
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_cond_init(c: *mut pthread_cond_t, a: *const pthread_condattr_t) -> c_int {
+    unsafe {
+        ptr::write(c, core::mem::zeroed::<pthread_cond_t>());
+        assert_eq!(ptr::read_volatile(&(*c).__u.__p[0]), ptr::null_mut());
+        assert_eq!(ptr::read_volatile(&(*c).__u.__vi[2]), 0);
+        assert_eq!(ptr::read_volatile(&(*c).__u.__vi[3]), 0);
+        assert_eq!((*c).__u.__i[4], 0);
+        assert_eq!(ptr::read_volatile(&(*c).__u.__vi[8]), 0);
+        assert_eq!(ptr::read_volatile(&(*c).__u.__p[1]), ptr::null_mut());
+        assert_eq!(ptr::read_volatile(&(*c).__u.__p[5]), ptr::null_mut());
+
+        if !a.is_null() {
+            (*c).__u.__i[4] = ((*a).__attr & 0x7fffffff) as c_int;
+            if (*a).__attr >> 31 != 0 {
+                ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[0]), usize::MAX as *mut c_void);
+            }
+        }
+    }
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_cond_wait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t) -> c_int {
+    pthread_cond_timedwait(c, m, 0 as *const libc::timespec)
+}
+
+pub struct waiter {
+    next: *mut waiter,
+    prev: *mut waiter,
+    state: c_int,           // volatile
+    barrier: c_int,         // volatile
+    notify: *mut c_int,     // volatile
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn lock(l: *mut c_int) -> () {
+    if a_cas(l, 0, 1) != 0 {
+        a_cas(l, 1, 2);
+        loop {
+            wait(l, ptr::null_mut(), 2, 1);
+            if a_cas(l, 0, 2) == 0 {break;}
+        }
+    }
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn unlock(l: *mut c_int) -> () {
+    if a_swap(l, 0) == 2 {
+        wake(l, 1, 1);
+    }
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn unlock_requeue(l: *mut c_int, r: *mut c_int, w: c_int) -> () {
+    a_store(l, 0);
+    if w != 0 {
+        wake(l, 1, 1);
+    } else {
+        unsafe {
+            let _ = 
+            __syscall5(libc::SYS_futex, l as c_long, (libc::FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long, 0 as c_long, 1 as c_long, r as c_long) != libc::ENOSYS as c_long
+            || __syscall5(libc::SYS_futex, l as c_long, libc::FUTEX_REQUEUE as c_long, 0 as c_long, 1 as c_long, r as c_long) != 0;
+        };
+    }
+}
+
+#[repr(C)]
+pub enum THREAD_STATE {
+    WAITING,
+    SIGNALED,
+    LEAVING,
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t, ts: *const libc::timespec) -> c_int {
+    let mut node: waiter = unsafe {core::mem::zeroed()};
+    let mut e: c_int;
+    let seq: c_int;
+    let clock: c_int = unsafe{(*c)._c_clock()};
+    let mut cs: c_int = 0;
+    let mut shared: c_int = 0;
+    let oldstate: c_int;
+    let mut tmp:c_int = 0;
+    let fut: *mut c_int;    // volatile
+    let _self: pthread_t = pthread_self();
+
+    if m.is_null() {
+        return libc::EINVAL;
+    }
+
+    if unsafe{(*m)._m_type()} & 15 != 0 && unsafe{(*m)._m_lock()&libc::INT_MAX != (*_self).tid} {return libc::EPERM;}
+
+    if !ts.is_null() && (unsafe{(*ts).tv_nsec} as u64 >= 1000000000u64) {return libc::EINVAL;}
+
+    pthread_testcancel();
+
+    if unsafe{(*c)._c_shared()} != ptr::null_mut() {
+        shared = 1;
+        fut = unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])};
+        seq = unsafe{(*c)._c_seq()};
+        a_inc(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])});
+    } else {
+        lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+
+        node.barrier = 2;
+        seq = 2;
+        fut = ptr::addr_of_mut!(node.barrier);
+        node.state = THREAD_STATE::WAITING as c_int;
+        node.next = unsafe{(*c)._c_head()} as *mut waiter;
+        unsafe{ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[1]), ptr::addr_of_mut!(node) as *mut c_void);}
+        unsafe {
+            if (*c)._c_tail() == ptr::null_mut() {
+                ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[5]), ptr::addr_of_mut!(node) as *mut c_void);
+            } else {
+                (*node.next).prev = ptr::addr_of_mut!(node);
+            }
+        }
+        unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+    }
+
+    pthread_mutex_unlock(m);
+
+    pthread_setcancelstate(PTHREAD_CANCEL_MASKED, ptr::addr_of_mut!(cs));
+    if cs == PTHREAD_CANCEL_DISABLE {
+        pthread_setcancelstate(cs, ptr::null_mut());
+    }
+
+    loop {
+        e = timedwait_cp(fut, seq, clock, ts, (shared==0) as c_int);
+        if !(unsafe{*(fut)}==seq && (e==0 || e==libc::EINTR)) {
+            break;
+        }
+    }
+    if e == libc::EINTR {
+        e = 0;
+    }
+
+    if shared != 0 {
+        if e == libc::ECANCELED && unsafe{(*c)._c_seq() != seq} {e = 0;}
+        if a_fetch_add(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])}, -1) == -0x7fffffff {
+            wake(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])}, 1, 0);
+        }
+        oldstate = THREAD_STATE::WAITING as c_int;
+        return relock(&mut e, m, &mut tmp, oldstate, ptr::addr_of_mut!(node), cs);
+    }
+
+    oldstate = a_cas(ptr::addr_of_mut!(node.state), THREAD_STATE::WAITING as c_int, THREAD_STATE::LEAVING as c_int);
+
+    if oldstate == THREAD_STATE::WAITING as c_int {
+        lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+
+        if unsafe{(*c)._c_head()} as *mut waiter == ptr::addr_of_mut!(node) {
+            unsafe{ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[1]), node.next as *mut c_void);}
+        } else if node.prev != ptr::null_mut() {
+            unsafe{(*node.prev).next = node.next;}
+        }
+
+        if unsafe{(*c)._c_tail()} as *mut waiter == ptr::addr_of_mut!(node) {
+            unsafe{ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[5]), node.prev as *mut c_void);}
+        } else if node.next != ptr::null_mut() {
+            unsafe{(*node.next).prev = node.prev;}
+        }
+
+        unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+
+        if node.notify != ptr::null_mut() {
+            if a_fetch_add(node.notify, -1) == 1 {
+                wake(node.notify, 1, 1);
+            }
+        }
+    } else {
+        lock(ptr::addr_of_mut!(node.barrier));
+    }
+
+    relock(&mut e, m, &mut tmp, oldstate, ptr::addr_of_mut!(node), cs)
+}
+
+fn relock(e: &mut c_int, m: *mut pthread_mutex_t , tmp: &mut c_int, oldstate: c_int, node: *mut waiter, cs: c_int) -> c_int {
+    *tmp = pthread_mutex_lock(m);
+    if *tmp != 0 {*e = *tmp;}
+
+    if oldstate == THREAD_STATE::WAITING as c_int {done(*e, cs);}
+
+    if unsafe{(*node).next == ptr::null_mut()} && unsafe{(*m)._m_type()&8 == 0} {
+        a_inc(unsafe{ptr::addr_of_mut!((*m).__u.__vi[2])});
+    }
+
+    unsafe {
+        if (*node).prev != ptr::null_mut() {
+            let val = (*m)._m_lock();
+            if val > 0 {
+                a_cas(ptr::addr_of_mut!((*m).__u.__vi[1]), val, val | libc::INT_MIN);
+            }
+            unlock_requeue(ptr::addr_of_mut!((*(*node).prev).barrier), ptr::addr_of_mut!((*m).__u.__vi[1]), (*m)._m_type()&(8|128));
+        } else if ((*m)._m_type() & 8) == 0 {
+            a_dec(ptr::addr_of_mut!((*m).__u.__vi[2]));
+        }
+    }
+
+    if *e == libc::ECANCELED {*e = 0;}
+
+    done(*e, cs)
+}
+
+fn done(e: c_int, cs: c_int) -> c_int {
+    pthread_setcancelstate(cs, ptr::null_mut());
+
+    if e == libc::ECANCELED {
+        pthread_testcancel();
+        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, ptr::null_mut());
+    }
+
+    e
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_testcancel() -> () {
+    testcancel();
+}
+
+#[no_mangle]
+pub extern "C" fn testcancel() -> () {
+    let _self: pthread_t = pthread_self();
+    if unsafe{ptr::read_volatile(ptr::addr_of_mut!((*_self).cancel))} != 0 && unsafe{ptr::read_volatile(ptr::addr_of!((*_self).canceldisable))} == 0 {
+        cancel();
+    } 
+}
+
+#[no_mangle]
+pub extern "C" fn cancel() -> c_long {
+    let _self: pthread_t = pthread_self();
+    unsafe {
+        if {ptr::read_volatile(ptr::addr_of!((*_self).canceldisable))} == PTHREAD_CANCEL_ENABLE as u8
+        || {ptr::read_volatile(ptr::addr_of!((*_self).cancelasync))} != 0 {
+            libc::pthread_exit(PTHREAD_CANCELED);
+        }
+    }
+    unsafe{ptr::write_volatile(ptr::addr_of_mut!((*_self).canceldisable), PTHREAD_CANCEL_DISABLE as u8);}
+    
+    -libc::ECANCELED as c_long
 }
