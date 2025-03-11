@@ -279,6 +279,75 @@ pub extern "C" fn get_tid(t: pthread_t) -> c_int {
     unsafe {(*t).tid}
 }
 
+pub type syscall_arg_t = c_long;
+
+#[no_mangle]
+pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
+                             u: syscall_arg_t, v: syscall_arg_t, w: syscall_arg_t,
+                             x: syscall_arg_t, y: syscall_arg_t, z: syscall_arg_t) -> c_long 
+{
+    let _self: pthread_t = pthread_self();
+    let mut r: c_long;
+    let st: c_int;
+
+    st = unsafe {(*_self).canceldisable as c_int};
+    if st != 0 && (st==PTHREAD_CANCEL_DISABLE || nr==libc::SYS_close) {
+        return __syscall6(nr, u, v, w, x, y, z);
+    }
+
+    r = __syscall_cp_asm(ptr::addr_of!((*_self).cancel), nr, u, v, w, x, y, z);
+    if r==-libc::EINTR as c_long && nr!=libc::SYS_close && (*_self).cancel!=0 && (*_self).canceldisable != PTHREAD_CANCEL_DISABLE as u8{
+        r = cancel();
+    }
+
+    r
+}
+
+#[inline(always)]
+#[no_mangle]
+pub unsafe extern "C" fn __syscall_cp_asm(
+    cancel_ptr: *const i32,  // x0: self->cancel 的指针
+    nr: i64,                 // x1: 系统调用号
+    u: i64,                  // x2: 参数1
+    v: i64,                  // x3: 参数2
+    w: i64,                  // x4: 参数3
+    x: i64,                  // x5: 参数4
+    y: i64,                  // x6: 参数5
+    z: i64                   // x7: 参数6
+) -> i64 {                   // 返回值在 x0
+    let result: i64;
+    asm!(
+        "ldr w0, [{cancel_ptr}]",    // 加载 *cancel_ptr 到 w0
+        "cbnz w0, 1f",              // 如果 w0 != 0，跳转到标签 1 (forward)
+        "mov x8, {nr}",              // nr -> x8
+        "mov x0, {u}",               // u -> x0
+        "mov x1, {v}",               // v -> x1
+        "mov x2, {w}",               // w -> x2
+        "mov x3, {x}",               // x -> x3
+        "mov x4, {y}",               // y -> x4
+        "mov x5, {z}",               // z -> x5
+        "svc #0",                    // 执行系统调用
+        "b 2f",                      // 跳到结束标签 2 (forward)
+        "1:",                        // 标签 1: 取消逻辑
+        "bl cancel",                 // 调用 rlibc 的 cancel 函数
+        "2:",                        // 标签 2: 结束
+
+        cancel_ptr = in(reg) cancel_ptr,
+        nr = in(reg) nr,
+        u = in(reg) u,
+        v = in(reg) v,
+        w = in(reg) w,
+        x = in(reg) x,
+        y = in(reg) y,
+        z = in(reg) z,
+
+        out("x0") result,
+
+        clobber_abi("C"),
+    );
+    result
+}
+
 #[repr(C)]
 pub struct pthread_mutex_t {
     pub __u: ptmu,
@@ -976,7 +1045,7 @@ pub union ptcu {
 }
 
 impl pthread_cond_t {
-    pub fn _c_shared(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[0])}}
+    pub fn _c_shared(&self) -> *mut c_void {unsafe {ptr::read_volatile(ptr::addr_of!(self.__u.__p[0]))}}
     pub fn _c_seq(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[2])}}
     pub fn _c_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
     pub fn _c_clock(&self) -> c_int {unsafe {self.__u.__i[4]}}
@@ -1018,12 +1087,25 @@ pub extern "C" fn pthread_cond_wait(c: *mut pthread_cond_t, m: *mut pthread_mute
     pthread_cond_timedwait(c, m, 0 as *const libc::timespec)
 }
 
+#[repr(C)]
 pub struct waiter {
     next: *mut waiter,
     prev: *mut waiter,
     state: c_int,           // volatile
     barrier: c_int,         // volatile
     notify: *mut c_int,     // volatile
+}
+
+impl waiter {
+    pub fn new() -> Self {
+        Self {
+            next: ptr::null_mut(),
+            prev: ptr::null_mut(),
+            state: 0,
+            barrier: 0,
+            notify: ptr::null_mut(),
+        }
+    }
 }
 
 #[inline(always)]
@@ -1070,7 +1152,7 @@ pub enum THREAD_STATE {
 
 #[no_mangle]
 pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t, ts: *const libc::timespec) -> c_int {
-    let mut node: waiter = unsafe {core::mem::zeroed()};
+    let mut node: waiter = waiter::new();
     let mut e: c_int;
     let seq: c_int;
     let clock: c_int = unsafe{(*c)._c_clock()};
