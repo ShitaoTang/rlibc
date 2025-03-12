@@ -260,8 +260,9 @@ impl pthread_attr_t {
 // }
 
 
-#[inline]
-pub fn __get_up() -> uintptr_t {
+#[inline(always)]
+pub fn __get_up() -> uintptr_t
+{
     let tp: uintptr_t;
     unsafe {
         asm!("mrs {}, TPIDR_EL0", out(reg) tp);
@@ -270,12 +271,14 @@ pub fn __get_up() -> uintptr_t {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_self() -> pthread_t {
+pub extern "C" fn pthread_self() -> pthread_t
+{
     (__get_up() - core::mem::size_of::<pthread>() as uintptr_t - TP_OFFSET as uintptr_t) as pthread_t
 }
 
 #[no_mangle]
-pub extern "C" fn get_tid(t: pthread_t) -> c_int {
+pub extern "C" fn get_tid(t: pthread_t) -> c_int
+{
     unsafe {(*t).tid}
 }
 
@@ -306,32 +309,24 @@ pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
 
 #[inline(always)]
 #[no_mangle]
-pub unsafe extern "C" fn __syscall_cp_asm(
-    cancel_ptr: *const i32,  // x0: self->cancel 的指针
-    nr: i64,                 // x1: 系统调用号
-    u: i64,                  // x2: 参数1
-    v: i64,                  // x3: 参数2
-    w: i64,                  // x4: 参数3
-    x: i64,                  // x5: 参数4
-    y: i64,                  // x6: 参数5
-    z: i64                   // x7: 参数6
-) -> i64 {                   // 返回值在 x0
+pub unsafe extern "C" fn __syscall_cp_asm(cancel_ptr: *const i32, nr: i64, u: i64, v: i64, w: i64, x: i64, y: i64, z: i64) -> i64
+{
     let result: i64;
     asm!(
-        "ldr w0, [{cancel_ptr}]",    // 加载 *cancel_ptr 到 w0
-        "cbnz w0, 1f",              // 如果 w0 != 0，跳转到标签 1 (forward)
-        "mov x8, {nr}",              // nr -> x8
-        "mov x0, {u}",               // u -> x0
-        "mov x1, {v}",               // v -> x1
-        "mov x2, {w}",               // w -> x2
-        "mov x3, {x}",               // x -> x3
-        "mov x4, {y}",               // y -> x4
-        "mov x5, {z}",               // z -> x5
-        "svc #0",                    // 执行系统调用
-        "b 2f",                      // 跳到结束标签 2 (forward)
-        "1:",                        // 标签 1: 取消逻辑
-        "bl cancel",                 // 调用 rlibc 的 cancel 函数
-        "2:",                        // 标签 2: 结束
+        "ldr w0, [{cancel_ptr}]",
+        "cbnz w0, 1f",
+        "mov x8, {nr}",
+        "mov x0, {u}",
+        "mov x1, {v}",
+        "mov x2, {w}",
+        "mov x3, {x}",
+        "mov x4, {y}",
+        "mov x5, {z}",
+        "svc #0",
+        "b 2f",
+        "1:",
+        "bl cancel",
+        "2:",
 
         cancel_ptr = in(reg) cancel_ptr,
         nr = in(reg) nr,
@@ -385,7 +380,8 @@ pub struct pthread_mutexattr_t {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_init(m: *mut pthread_mutex_t, a: *const pthread_mutexattr_t) -> c_int {
+pub extern "C" fn pthread_mutex_init(m: *mut pthread_mutex_t, a: *const pthread_mutexattr_t) -> c_int
+{
     if m.is_null() {
         return -1;
     }
@@ -408,7 +404,8 @@ pub extern "C" fn pthread_mutex_init(m: *mut pthread_mutex_t, a: *const pthread_
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_lock(m: *mut pthread_mutex_t) -> c_int {
+pub extern "C" fn pthread_mutex_lock(m: *mut pthread_mutex_t) -> c_int
+{
     if m.is_null() {
         return -1;
     }
@@ -422,7 +419,8 @@ pub extern "C" fn pthread_mutex_lock(m: *mut pthread_mutex_t) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_timedlock(m: *mut pthread_mutex_t, at: *const libc::timespec) -> c_int {
+pub extern "C" fn pthread_mutex_timedlock(m: *mut pthread_mutex_t, at: *const libc::timespec) -> c_int
+{
     if m.is_null() {
         return -1;
     }
@@ -475,7 +473,8 @@ pub extern "C" fn pthread_mutex_timedlock(m: *mut pthread_mutex_t, at: *const li
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int {
+pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int
+{
     if m.is_null() {
         return -1;
     }
@@ -488,7 +487,8 @@ pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int {
+pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int
+{
     if m.is_null() {
         return -1;
     }
@@ -544,7 +544,8 @@ pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int 
     0
 }
 
-fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pthread_t) -> c_int {
+fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pthread_t) -> c_int
+{
     if (lock_type & 8) != 0 && unsafe { (*m)._m_waiters() } != 0 {
         let priv_flag = (lock_type & 128) ^ 128;
         unsafe {__syscall2(libc::SYS_futex, ptr::addr_of!((*m).__u.__vi[1]) as c_long, (libc::FUTEX_UNLOCK_PI | priv_flag) as c_long);}
@@ -578,14 +579,16 @@ fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pt
     0
 }
 
-pub extern "C" fn futex4(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int {
+pub extern "C" fn futex4(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int
+{
     unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     let res = unsafe {__syscall4(libc::SYS_futex, addr as c_long, op as c_long, val as c_long, to as c_long)};
     unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     res as c_int
 }
 
-pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int {
+pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int
+{
     let mut cs: c_int = 0;
     let r: c_int;
 
@@ -599,7 +602,8 @@ pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: libc::clockid_t, 
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_setcancelstate(new: c_int, old: *mut c_int) -> c_int {
+pub extern "C" fn pthread_setcancelstate(new: c_int, old: *mut c_int) -> c_int
+{
     if new as c_uint > 2u32 {return libc::EINVAL;}   // trick, only when 0<=new<=2, it's valid (negatives are invalid)
     let mut _self: pthread_t = pthread_self();
     unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
@@ -609,7 +613,8 @@ pub extern "C" fn pthread_setcancelstate(new: c_int, old: *mut c_int) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int {
+pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int
+{
     let mut r: c_int;
     let mut to: libc::timespec = libc::timespec {tv_sec: 0, tv_nsec: 0};
     let mut top: *mut libc::timespec = ptr::null_mut();
@@ -639,7 +644,8 @@ pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_
 }
 
 #[no_mangle]
-pub extern "C" fn clock_gettime(clk: libc::clockid_t, ts: *mut libc::timespec) -> c_int {
+pub extern "C" fn clock_gettime(clk: libc::clockid_t, ts: *mut libc::timespec) -> c_int
+{
     let mut r: c_int;
     r = unsafe {__syscall2(libc::SYS_clock_gettime, clk as c_long, ts as c_long) as c_int};
     if r == -libc::ENOSYS {
@@ -657,7 +663,8 @@ pub extern "C" fn clock_gettime(clk: libc::clockid_t, ts: *mut libc::timespec) -
 }
 
 #[no_mangle]
-pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int {
+pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int
+{
     unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     let r: c_int = unsafe {
         __syscall6(libc::SYS_futex, addr as c_long, op as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int
@@ -669,7 +676,8 @@ pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_timedlock_pi(m: *mut pthread_mutex_t, at: *const libc::timespec) -> c_int {
+pub extern "C" fn pthread_mutex_timedlock_pi(m: *mut pthread_mutex_t, at: *const libc::timespec) -> c_int
+{
     let lock_type = unsafe {(*m)._m_type()};
     let lock_priv = (lock_type & 128) ^ 128;
     let mut _self: pthread_t = pthread_self();
@@ -716,7 +724,8 @@ pub extern "C" fn pthread_mutex_timedlock_pi(m: *mut pthread_mutex_t, at: *const
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int {
+pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
+{
     let mut _self: pthread_t = pthread_self();
     let mut waiters: c_int = unsafe {(*m)._m_waiters()};
     let cont: c_int;
@@ -780,7 +789,8 @@ pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int {
 } 
 
 #[no_mangle]
-pub unsafe extern "C" fn vm_wait() -> () {
+pub unsafe extern "C" fn vm_wait() -> ()
+{
     let mut tmp = vmlock[0];
     loop {
         wait(ptr::addr_of_mut!(vmlock) as *mut c_int, (ptr::addr_of_mut!(vmlock) as *mut c_int).add(1), tmp, 1);
@@ -790,19 +800,22 @@ pub unsafe extern "C" fn vm_wait() -> () {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn vm_lock() -> () {
+pub unsafe extern "C" fn vm_lock() -> ()
+{
     a_inc(ptr::addr_of_mut!(vmlock) as *mut c_int);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn vm_unlock() -> () {
-    if a_fetch_add(ptr::addr_of_mut!(vmlock) as *mut c_int, -1) == 1 && vmlock[1] != 0 {
+pub unsafe extern "C" fn vm_unlock() -> ()
+{
+    if a_fetch_add(ptr::addr_of_mut!(vmlock) as *mut c_int, -1) == 1 && vmlock[1] != 0{
         wake(ptr::addr_of!(vmlock) as *mut c_int, -1, 1);
     }
 }
 
 #[no_mangle]
-pub extern "C" fn wait(addr: *mut c_int, waiters: *mut c_int, val: c_int, lock_priv: c_int) -> () {
+pub extern "C" fn wait(addr: *mut c_int, waiters: *mut c_int, val: c_int, lock_priv: c_int) -> ()
+{
     let mut spins: c_int = 100;
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
     while spins != 0 && (waiters.is_null() || unsafe {ptr::read_volatile(waiters)} == 0) {
@@ -828,7 +841,8 @@ pub extern "C" fn wait(addr: *mut c_int, waiters: *mut c_int, val: c_int, lock_p
 
 #[no_mangle]
 #[inline(always)]
-pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> () {
+pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> ()
+{
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
     let cnt = if cnt < 0 { libc::INT_MAX } else { cnt };
     unsafe {
@@ -841,13 +855,15 @@ pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> () {
 type pthread_spinlock_t = c_int;
 
 #[no_mangle]
-pub extern "C" fn pthread_spin_init(s: *mut pthread_spinlock_t, _pshared: c_int) -> c_int {
+pub extern "C" fn pthread_spin_init(s: *mut pthread_spinlock_t, _pshared: c_int) -> c_int
+{
     unsafe {*s = 0;}
     0
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_spin_lock(s: *mut pthread_spinlock_t) -> c_int {
+pub extern "C" fn pthread_spin_lock(s: *mut pthread_spinlock_t) -> c_int
+{
     unsafe {
         while ptr::read_volatile(s) != 0 || a_cas(s, 0, libc::EBUSY) != 0 {
             a_barrier();
@@ -857,19 +873,22 @@ pub extern "C" fn pthread_spin_lock(s: *mut pthread_spinlock_t) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_spin_trylock(s: *mut pthread_spinlock_t) -> c_int {
+pub extern "C" fn pthread_spin_trylock(s: *mut pthread_spinlock_t) -> c_int
+{
     a_cas(s, 0, libc::EBUSY);
     0
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_spin_unlock(s: *mut pthread_spinlock_t) -> c_int {
+pub extern "C" fn pthread_spin_unlock(s: *mut pthread_spinlock_t) -> c_int
+{
     a_store(s, 0);
     0
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_spin_destroy(_s: *mut pthread_spinlock_t) -> c_int {
+pub extern "C" fn pthread_spin_destroy(_s: *mut pthread_spinlock_t) -> c_int
+{
     0
 }
 
@@ -906,7 +925,8 @@ pub struct pthread_rwlockattr_t {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_init(rw: *mut pthread_rwlock_t, a: *const pthread_rwlockattr_t) -> c_int {
+pub extern "C" fn pthread_rwlock_init(rw: *mut pthread_rwlock_t, a: *const pthread_rwlockattr_t) -> c_int
+{
     if rw.is_null() {return -1;}
 
     unsafe {
@@ -924,12 +944,14 @@ pub extern "C" fn pthread_rwlock_init(rw: *mut pthread_rwlock_t, a: *const pthre
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_rdlock(rw: *mut pthread_rwlock_t) -> c_int {
+pub extern "C" fn pthread_rwlock_rdlock(rw: *mut pthread_rwlock_t) -> c_int
+{
     pthread_rwlock_timedrdlock(rw, 0 as *const libc::timespec)
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_timedrdlock(rw: *mut pthread_rwlock_t, at: *const libc::timespec) -> c_int {
+pub extern "C" fn pthread_rwlock_timedrdlock(rw: *mut pthread_rwlock_t, at: *const libc::timespec) -> c_int
+{
     let mut r: c_int = pthread_rwlock_tryrdlock(rw);
     if r != libc::EBUSY {return r;}
 
@@ -962,7 +984,8 @@ pub extern "C" fn pthread_rwlock_timedrdlock(rw: *mut pthread_rwlock_t, at: *con
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_tryrdlock(rw: *mut pthread_rwlock_t) -> c_int {
+pub extern "C" fn pthread_rwlock_tryrdlock(rw: *mut pthread_rwlock_t) -> c_int
+{
     let mut val: c_int;
     let mut cnt: c_int;
     loop {
@@ -976,12 +999,14 @@ pub extern "C" fn pthread_rwlock_tryrdlock(rw: *mut pthread_rwlock_t) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_wrlock(rw: *mut pthread_rwlock_t) -> c_int {
+pub extern "C" fn pthread_rwlock_wrlock(rw: *mut pthread_rwlock_t) -> c_int
+{
     pthread_rwlock_timedwrlock(rw, 0 as *const libc::timespec)
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_timedwrlock(rw: *mut pthread_rwlock_t, at: *const libc::timespec) -> c_int {
+pub extern "C" fn pthread_rwlock_timedwrlock(rw: *mut pthread_rwlock_t, at: *const libc::timespec) -> c_int
+{
     let mut r: c_int = pthread_rwlock_trywrlock(rw);
     if r != libc::EBUSY {return r;}
 
@@ -1014,13 +1039,15 @@ pub extern "C" fn pthread_rwlock_timedwrlock(rw: *mut pthread_rwlock_t, at: *con
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_trywrlock(rw: *mut pthread_rwlock_t) -> c_int {
+pub extern "C" fn pthread_rwlock_trywrlock(rw: *mut pthread_rwlock_t) -> c_int
+{
     if a_cas(unsafe {ptr::addr_of_mut!((*rw).__u.__vi[0])}, 0, 0x7fffffff) != 0 {return libc::EBUSY;}
     0
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_rwlock_unlock(rw: *mut pthread_rwlock_t) -> c_int {
+pub extern "C" fn pthread_rwlock_unlock(rw: *mut pthread_rwlock_t) -> c_int
+{
     let mut val: c_int;
     let mut cnt: c_int;
     let mut waiters: c_int;
@@ -1077,7 +1104,8 @@ pub struct pthread_condattr_t {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_cond_init(c: *mut pthread_cond_t, a: *const pthread_condattr_t) -> c_int {
+pub extern "C" fn pthread_cond_init(c: *mut pthread_cond_t, a: *const pthread_condattr_t) -> c_int
+{
     unsafe {
         ptr::write(c, core::mem::zeroed::<pthread_cond_t>());
         assert_eq!(ptr::read_volatile(&(*c).__u.__p[0]), ptr::null_mut());
@@ -1100,7 +1128,8 @@ pub extern "C" fn pthread_cond_init(c: *mut pthread_cond_t, a: *const pthread_co
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_cond_wait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t) -> c_int {
+pub extern "C" fn pthread_cond_wait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t) -> c_int
+{
     pthread_cond_timedwait(c, m, 0 as *const libc::timespec)
 }
 
@@ -1127,7 +1156,8 @@ impl waiter {
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn lock(l: *mut c_int) -> () {
+pub extern "C" fn lock(l: *mut c_int) -> ()
+{
     if a_cas(l, 0, 1) != 0 {
         a_cas(l, 1, 2);
         loop {
@@ -1139,7 +1169,8 @@ pub extern "C" fn lock(l: *mut c_int) -> () {
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn unlock(l: *mut c_int) -> () {
+pub extern "C" fn unlock(l: *mut c_int) -> ()
+{
     if a_swap(l, 0) == 2 {
         wake(l, 1, 1);
     }
@@ -1147,7 +1178,8 @@ pub extern "C" fn unlock(l: *mut c_int) -> () {
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn unlock_requeue(l: *mut c_int, r: *mut c_int, w: c_int) -> () {
+pub extern "C" fn unlock_requeue(l: *mut c_int, r: *mut c_int, w: c_int) -> ()
+{
     a_store(l, 0);
     if w != 0 {
         wake(l, 1, 1);
@@ -1168,7 +1200,8 @@ pub enum THREAD_STATE {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t, ts: *const libc::timespec) -> c_int {
+pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t, ts: *const libc::timespec) -> c_int
+{
     let mut node: waiter = waiter::new();
     let mut e: c_int;
     let seq: c_int;
@@ -1271,7 +1304,8 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
     relock(&mut e, m, &mut tmp, oldstate, ptr::addr_of_mut!(node), cs)
 }
 
-fn relock(e: &mut c_int, m: *mut pthread_mutex_t , tmp: &mut c_int, oldstate: c_int, node: *mut waiter, cs: c_int) -> c_int {
+fn relock(e: &mut c_int, m: *mut pthread_mutex_t , tmp: &mut c_int, oldstate: c_int, node: *mut waiter, cs: c_int) -> c_int
+{
     *tmp = pthread_mutex_lock(m);
     if *tmp != 0 {*e = *tmp;}
 
@@ -1298,7 +1332,8 @@ fn relock(e: &mut c_int, m: *mut pthread_mutex_t , tmp: &mut c_int, oldstate: c_
     done(*e, cs)
 }
 
-fn done(e: c_int, cs: c_int) -> c_int {
+fn done(e: c_int, cs: c_int) -> c_int
+{
     pthread_setcancelstate(cs, ptr::null_mut());
 
     if e == libc::ECANCELED {
@@ -1310,12 +1345,14 @@ fn done(e: c_int, cs: c_int) -> c_int {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_testcancel() -> () {
+pub extern "C" fn pthread_testcancel() -> ()
+{
     testcancel();
 }
 
 #[no_mangle]
-pub extern "C" fn testcancel() -> () {
+pub extern "C" fn testcancel() -> ()
+{
     let _self: pthread_t = pthread_self();
     unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     if unsafe{ptr::read_volatile(ptr::addr_of_mut!((*_self).cancel))} != 0 && unsafe{ptr::read_volatile(ptr::addr_of!((*_self).canceldisable))} == 0 {
@@ -1324,7 +1361,8 @@ pub extern "C" fn testcancel() -> () {
 }
 
 #[no_mangle]
-pub extern "C" fn cancel() -> c_long {
+pub extern "C" fn cancel() -> c_long
+{
     let _self: pthread_t = pthread_self();
     unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     unsafe {
@@ -1336,4 +1374,134 @@ pub extern "C" fn cancel() -> c_long {
     unsafe{ptr::write_volatile(ptr::addr_of_mut!((*_self).canceldisable), PTHREAD_CANCEL_DISABLE as u8);}
     
     -libc::ECANCELED as c_long
+}
+
+#[no_mangle]
+pub extern "C" fn private_cond_signal(c: *mut pthread_cond_t, n: c_int) -> c_int
+{
+    let mut p: *mut waiter;
+    let mut first: *mut waiter = ptr::null_mut();
+    let mut _ref: c_int = 0;     // volatile
+    let mut cur: c_int;
+    let mut n = n;
+
+    lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+    unsafe{p = (*c)._c_tail() as *mut waiter};
+    while n!=0 && p != ptr::null_mut() {
+        if (a_cas(unsafe{ptr::addr_of_mut!((*p).state)}, THREAD_STATE::WAITING as c_int, THREAD_STATE::SIGNALED as c_int)) != THREAD_STATE::WAITING as c_int {
+            unsafe { ptr::write_volatile(ptr::addr_of_mut!(_ref), ptr::read_volatile(&_ref) + 1); } // volatile +1
+            unsafe {(*p).notify = ptr::addr_of_mut!(_ref);}
+        } else {
+            n -= 1;
+            if first == ptr::null_mut() {first = p;}
+        }
+        p = unsafe{(*p).prev};
+    }
+
+    if p != ptr::null_mut() {
+        if unsafe{(*p).next != ptr::null_mut()} {
+            unsafe{(*(*p).next).prev = ptr::null_mut()};
+        } 
+        unsafe{(*p).next = ptr::null_mut()};
+    } else {
+        unsafe{ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[1]), ptr::null_mut())};
+    }
+    unsafe {
+        ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[5]), ptr::null_mut());
+    }
+    unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+
+    cur = _ref;
+    loop {
+        if cur == 0 {break;}
+        wait(ptr::addr_of_mut!(cur), ptr::null_mut(), cur, 1);
+        cur = _ref;
+    }
+
+    if first != ptr::null_mut() {
+        unsafe{unlock(ptr::addr_of_mut!((*first).barrier))};
+    }
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_cond_signal(c: *mut pthread_cond_t) -> c_int
+{
+    if unsafe{(*c)._c_shared()} == ptr::null_mut() {
+        return private_cond_signal(c, 1);
+    }
+    if unsafe{(*c)._c_waiters()} == 0 {return 0;}
+    a_inc(unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])});
+    wake(unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])}, 1, 0);
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_cond_broadcast(c: *mut pthread_cond_t) -> c_int
+{
+    if unsafe{(*c)._c_shared()} == ptr::null_mut() {
+        return private_cond_signal(c, -1 as c_int);
+    }
+    if unsafe{(*c)._c_waiters()} == 0 {return 0;}
+    a_inc(unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])});
+    wake(unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])}, -1 as c_int, 0);
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_cond_destory(c: *mut pthread_cond_t) -> c_int
+{
+    if unsafe{(*c)._c_shared()} != ptr::null_mut() && unsafe{(*c)._c_waiters()} != 0 {
+        let mut cnt: c_int;
+        a_or(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])}, libc::INT_MIN);
+        a_inc(unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])});
+        wake(unsafe{ptr::addr_of_mut!((*c).__u.__vi[2])}, -1 as c_int, 0);
+        cnt = unsafe{(*c)._c_waiters()};
+        loop {
+            if (cnt&0x7fffffff) == 0 {break;}
+            wait(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])}, ptr::null_mut(), cnt, 0);
+            cnt = unsafe{(*c)._c_waiters()};
+        }
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_condattr_init(a: *mut pthread_condattr_t) -> c_int
+{
+    unsafe {
+        ptr::write(a, core::mem::zeroed::<pthread_condattr_t>());
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_condattr_destroy(_a: *mut pthread_condattr_t) -> c_int
+{
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_condattr_setclock(a: *mut pthread_condattr_t, clk: libc::clockid_t) -> c_int
+{
+    if (clk < 0) || (clk as u32).wrapping_sub(2) < 2 {return libc::EINVAL;}
+    unsafe {
+        (*a).__attr &= libc::INT_MIN as u32;
+        (*a).__attr |= clk as u32;
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_condattr_setpshared(a: *mut pthread_condattr_t, pshared: c_int) -> c_int
+{
+    if pshared as u32 > 1u32 {return libc::EINVAL;}
+    unsafe {
+        (*a).__attr &= 0x7fffffff;
+        (*a).__attr |= (pshared << 31) as u32;
+    }
+    0
 }
