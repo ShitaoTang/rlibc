@@ -200,14 +200,54 @@ pub extern "C" fn a_fetch_add(p: *mut c_int, v: c_int) -> c_int {
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn a_inc(p: *mut c_int) {
+pub extern "C" fn a_inc(p: *mut c_int) -> () {
     a_fetch_add(p, 1);
 }
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn a_dec(p: *mut c_int) {
+pub extern "C" fn a_dec(p: *mut c_int) -> () {
     a_fetch_add(p, -1);
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_fetch_and(p: *mut c_int, v: c_int) -> c_int {
+    let mut old: c_int;
+    loop {
+        old = a_ll(p);
+        let new = old & v;
+        if a_sc(p, new) != 0 {
+            break;
+        }
+    }
+    old
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_fetch_or(p: *mut c_int, v: c_int) -> c_int {
+    let mut old: c_int;
+    loop {
+        old = a_ll(p);
+        let new = old | v;
+        if a_sc(p, new) != 0 {
+            break;
+        }
+    }
+    old
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_and(p: *mut c_int, v: c_int) -> () {
+    a_fetch_and(p, v);
+}
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_or(p: *mut c_int, v: c_int) -> () {
+    a_fetch_or(p, v);
 }
 
 #[inline(always)]
