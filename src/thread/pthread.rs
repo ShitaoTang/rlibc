@@ -1156,7 +1156,7 @@ impl waiter {
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn lock(l: *mut c_int) -> ()
+pub extern "C" fn _lock(l: *mut c_int) -> ()
 {
     if a_cas(l, 0, 1) != 0 {
         a_cas(l, 1, 2);
@@ -1169,7 +1169,7 @@ pub extern "C" fn lock(l: *mut c_int) -> ()
 
 #[inline(always)]
 #[no_mangle]
-pub extern "C" fn unlock(l: *mut c_int) -> ()
+pub extern "C" fn _unlock(l: *mut c_int) -> ()
 {
     if a_swap(l, 0) == 2 {
         wake(l, 1, 1);
@@ -1229,7 +1229,7 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
         seq = unsafe{(*c)._c_seq()};
         a_inc(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])});
     } else {
-        lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+        _lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
 
         node.barrier = 2;
         seq = 2;
@@ -1244,7 +1244,7 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
                 (*node.next).prev = ptr::addr_of_mut!(node);
             }
         }
-        unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+        _unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
     }
 
     pthread_mutex_unlock(m);
@@ -1276,7 +1276,7 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
     oldstate = a_cas(ptr::addr_of_mut!(node.state), THREAD_STATE::WAITING as c_int, THREAD_STATE::LEAVING as c_int);
 
     if oldstate == THREAD_STATE::WAITING as c_int {
-        lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+        _lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
 
         if unsafe{(*c)._c_head()} as *mut waiter == ptr::addr_of_mut!(node) {
             unsafe{ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[1]), node.next as *mut c_void);}
@@ -1290,7 +1290,7 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
             unsafe{(*node.next).prev = node.prev;}
         }
 
-        unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+        _unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
 
         if node.notify != ptr::null_mut() {
             if a_fetch_add(node.notify, -1) == 1 {
@@ -1298,7 +1298,7 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
             }
         }
     } else {
-        lock(ptr::addr_of_mut!(node.barrier));
+        _lock(ptr::addr_of_mut!(node.barrier));
     }
 
     relock(&mut e, m, &mut tmp, oldstate, ptr::addr_of_mut!(node), cs)
@@ -1385,7 +1385,7 @@ pub extern "C" fn private_cond_signal(c: *mut pthread_cond_t, n: c_int) -> c_int
     let mut cur: c_int;
     let mut n = n;
 
-    lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+    _lock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
     unsafe{p = (*c)._c_tail() as *mut waiter};
     while n!=0 && p != ptr::null_mut() {
         if (a_cas(unsafe{ptr::addr_of_mut!((*p).state)}, THREAD_STATE::WAITING as c_int, THREAD_STATE::SIGNALED as c_int)) != THREAD_STATE::WAITING as c_int {
@@ -1409,7 +1409,7 @@ pub extern "C" fn private_cond_signal(c: *mut pthread_cond_t, n: c_int) -> c_int
     unsafe {
         ptr::write_volatile(ptr::addr_of_mut!((*c).__u.__p[5]), ptr::null_mut());
     }
-    unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
+    _unlock(unsafe{ptr::addr_of_mut!((*c).__u.__vi[8])});
 
     cur = _ref;
     loop {
@@ -1419,7 +1419,7 @@ pub extern "C" fn private_cond_signal(c: *mut pthread_cond_t, n: c_int) -> c_int
     }
 
     if first != ptr::null_mut() {
-        unsafe{unlock(ptr::addr_of_mut!((*first).barrier))};
+        unsafe{_unlock(ptr::addr_of_mut!((*first).barrier))};
     }
 
     0
