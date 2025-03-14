@@ -184,26 +184,6 @@ impl pthread_attr_t {
     pub fn _a_sched(&self) -> c_int { unsafe {self.__u.__i[3*__SU+1]}}
     pub fn _a_policy(&self) -> c_int { unsafe {self.__u.__i[3*__SU+2]}}
     pub fn _a_prio(&self) -> c_int { unsafe {self.__u.__i[3*__SU+3]}}
-
-    pub fn _m_type(&self) -> c_int { unsafe {self.__u.__i[0]}}
-    pub fn _m_lock(&self) -> c_int { unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
-    pub fn _m_waiters(&self) -> c_int { unsafe {ptr::read_volatile(&self.__u.__vi[2])}}
-    pub fn _m_counter(&self) -> c_int { unsafe {self.__u.__i[5]}}
-
-    pub fn _c_seq(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[2])}}
-    pub fn _c_waiters(&self) -> c_int { unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
-    pub fn _c_clock(&self) -> c_int {unsafe {self.__u.__i[4]}}
-    pub fn _c_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[8])}}
-
-    pub fn _rw_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[0])}}
-    pub fn _rw_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
-    pub fn _rw_shared(&self) -> c_int {unsafe {self.__u.__i[2]}}
-
-    pub fn _b_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[0])}}
-    pub fn _b_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
-    pub fn _b_limit(&self) -> c_int {unsafe {self.__u.__i[2]}}
-    pub fn _b_count(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
-    pub fn _b_waiters2(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[4])}}
 }
 
 // #[repr(C)]
@@ -820,14 +800,17 @@ pub extern "C" fn wait(addr: *mut c_int, waiters: *mut c_int, val: c_int, lock_p
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
     while spins != 0 && (waiters.is_null() || unsafe {ptr::read_volatile(waiters)} == 0) {
         spins -= 1;
-        unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
-        if unsafe {ptr::read_volatile(addr)} != val {
-            a_barrier();
+        // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+        if unsafe {ptr::read_volatile(addr)} == val {
+            a_spin();
         } else {
             return;
         }
     }
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    if !waiters.is_null() {
+        a_inc(waiters);
+    }
     while unsafe {ptr::read_volatile(addr)} == val {
         unsafe {
             let _ = __syscall4(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAIT|lock_priv) as c_long, val as c_long, 0 as c_long) != -libc::ENOSYS as c_long
@@ -1503,5 +1486,231 @@ pub extern "C" fn pthread_condattr_setpshared(a: *mut pthread_condattr_t, pshare
         (*a).__attr &= 0x7fffffff;
         (*a).__attr |= (pshared << 31) as u32;
     }
+    0
+}
+
+#[repr(C)]
+pub struct pthread_barrier_t {
+    pub __u: pbtu,
+}
+
+#[repr(C)]
+pub union pbtu {
+    #[cfg(target_pointer_width = "64")]
+    pub __i: [c_int; 8],
+    #[cfg(target_pointer_width = "32")]
+    pub __i: [c_int; 5],
+    #[cfg(target_pointer_width = "64")]
+    pub __vi: [c_int; 8],                  // volatile int
+    #[cfg(target_pointer_width = "32")]
+    pub __vi: [c_int; 5],                   // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 4],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 5],              // volatile void *
+}
+
+impl pthread_barrier_t {
+    pub fn _b_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[0])}}
+    pub fn _b_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
+    pub fn _b_limit(&self) -> c_int {unsafe {self.__u.__i[2]}}
+    pub fn _b_count(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
+    pub fn _b_waiters2(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[4])}}
+    pub fn _b_inst(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[3])}}
+}
+
+#[repr(C)]
+pub struct pthread_barrierattr_t {
+    pub __attr: c_uint,
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_barrier_init(b: *mut pthread_barrier_t, a: *const pthread_barrierattr_t, count: c_uint) -> c_int
+{
+    if count.wrapping_sub(1) > libc::INT_MAX as c_uint -1 {return libc::EINVAL;}
+    unsafe {
+        if b.is_null() {return libc::EINVAL;}
+        let attr = if a.is_null() {0} else {(*a).__attr};
+        ptr::write(b, core::mem::zeroed::<pthread_barrier_t>());
+        (*b).__u.__i[2] = ((count-1) | attr) as c_int;
+    }
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_barrierattr_init(a: *mut pthread_barrierattr_t) -> c_int
+{
+    unsafe {
+        ptr::write(a, core::mem::zeroed::<pthread_barrierattr_t>());
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_barrierattr_destroy(_a: *mut pthread_barrierattr_t) -> c_int
+{
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_barrierattr_setpshared(a: *mut pthread_barrierattr_t, pshared: c_int) -> c_int
+{
+    if pshared as u32 > 1u32 {return libc::EINVAL;}
+    unsafe {
+        (*a).__attr = if pshared!=0 {libc::INT_MIN as c_uint} else {0};
+    }
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn pshared_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
+    let limit: c_int = (unsafe{(*b)._b_limit()} & libc::INT_MAX) + 1;
+    let mut ret: c_int = 0;
+    let mut v: c_int;
+    let mut w: c_int;
+
+    if limit == 1 {
+        return libc::PTHREAD_BARRIER_SERIAL_THREAD;
+    }
+
+    v = a_cas(unsafe{ptr::addr_of_mut!((*b).__u.__vi[0])}, 0, limit);
+    while v != 0 {
+        wait(unsafe{ptr::addr_of_mut!((*b).__u.__vi[0])}, unsafe{ptr::addr_of_mut!((*b).__u.__vi[1])}, v, 0);
+        v = a_cas(unsafe{ptr::addr_of_mut!((*b).__u.__vi[0])}, 0, limit);
+    }
+
+    unsafe {
+        ptr::write_volatile(ptr::addr_of_mut!((*b).__u.__vi[3]), ptr::read_volatile(ptr::addr_of_mut!((*b).__u.__vi[3])) + 1);
+    
+        if (*b)._b_count() == limit {
+            a_store(ptr::addr_of_mut!((*b).__u.__vi[3]), 0);
+            ret = libc::PTHREAD_BARRIER_SERIAL_THREAD;
+            if (*b)._b_waiters2() != 0 {
+                wake(ptr::addr_of_mut!((*b).__u.__vi[3]), -1, 0);
+            }
+        } else {
+            a_store(ptr::addr_of_mut!((*b).__u.__vi[0]), 0);
+            if (*b)._b_waiters() != 0 {
+                wake(ptr::addr_of_mut!((*b).__u.__vi[0]), 1, 0);
+            }
+            v = (*b)._b_count();
+            while v > 0 {
+                wait(ptr::addr_of_mut!((*b).__u.__vi[3]), ptr::addr_of_mut!((*b).__u.__vi[4]), v, 0);
+                v = (*b)._b_count();
+            }
+        }
+    
+        vm_lock();
+
+        if a_fetch_add(ptr::addr_of_mut!((*b).__u.__vi[3]), -1) == 1-limit {
+            a_store(ptr::addr_of_mut!((*b).__u.__vi[3]), 0);
+            if (*b)._b_waiters2() != 0 {
+                wake(ptr::addr_of_mut!((*b).__u.__vi[3]), -1, 0);
+            }
+        } else {
+            v = (*b)._b_count();
+            while v != 0 {
+                wait(ptr::addr_of_mut!((*b).__u.__vi[3]), ptr::addr_of_mut!((*b).__u.__vi[4]), v, 0);
+                v = (*b)._b_count();
+            }
+        }
+
+        loop {
+            v = (*b)._b_lock();
+            w = (*b)._b_waiters();
+            if a_cas(ptr::addr_of_mut!((*b).__u.__vi[0]), v, if v==libc::INT_MIN+1 {0} else {v-1}) == v {break;}
+        }
+
+        if v==libc::INT_MIN+1 || (v==1 && w!=0) {
+            wake(ptr::addr_of_mut!((*b).__u.__vi[0]), 1, 0);
+        }
+
+        vm_unlock();
+    }
+
+    ret
+}
+
+#[repr(C)]
+struct instance {       // all members are volatile
+    count: c_int,
+    last: c_int,
+    waiters: c_int,
+    finished: c_int,
+}
+
+impl instance {
+    pub fn new() -> Self {
+        Self {
+            count: 0,
+            last: 0,
+            waiters: 0,
+            finished: 0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn pthread_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
+    let limit = unsafe{(*b)._b_limit()};
+    let mut inst: *mut instance;
+
+    if limit == 0 {return libc::PTHREAD_BARRIER_SERIAL_THREAD;}
+
+    if limit < 0 {return pshared_barrier_wait(b);}
+
+    unsafe {
+        while a_swap(ptr::addr_of_mut!((*b).__u.__vi[0]), 1) != 0 {
+            wait(ptr::addr_of_mut!((*b).__u.__vi[0]), ptr::addr_of_mut!((*b).__u.__vi[1]), 1, 1);
+        }
+        inst = (*b)._b_inst() as *mut instance;
+
+        if inst == ptr::null_mut() {
+            let mut new_inst: instance = instance::new();
+            let mut spins: c_int = 200;
+            inst = ptr::addr_of_mut!(new_inst);
+            ptr::write_volatile(ptr::addr_of_mut!((*b).__u.__p[3]), ptr::addr_of_mut!(new_inst) as *mut c_void);
+            a_store(ptr::addr_of_mut!((*b).__u.__vi[0]), 0);
+            if (*b)._b_waiters() != 0 {
+                wake(ptr::addr_of_mut!((*b).__u.__vi[0]), 1, 1);
+            }
+            while spins!=0 && ptr::read_volatile(&(*inst).finished) == 0  {
+                a_spin();
+                spins -= 1;
+            }
+            a_inc(ptr::addr_of_mut!((*inst).finished));
+            while ptr::read_volatile(&(*inst).finished) == 1 {
+                let _ = __syscall4(libc::SYS_futex, ptr::addr_of_mut!((*inst).finished) as c_long, (libc::FUTEX_WAIT | FUTEX_PRIVATE) as c_long, 1 as c_long, 0 as c_long) != -libc::ENOSYS as c_long
+                    || __syscall4(libc::SYS_futex, ptr::addr_of_mut!((*inst).finished) as c_long, libc::FUTEX_WAIT as c_long, 1 as c_long, 0 as c_long) != 0;
+            }
+            return libc::PTHREAD_BARRIER_SERIAL_THREAD;
+        }
+
+        assert_ne!(inst, ptr::null_mut());
+        (*inst).count += 1;
+        if ptr::read_volatile(ptr::addr_of_mut!((*inst).count)) == limit {
+            ptr::write_volatile(ptr::addr_of_mut!((*b).__u.__p[3]), ptr::null_mut());
+            a_store(ptr::addr_of_mut!((*b).__u.__vi[0]), 0);
+            if (*b)._b_waiters() != 0 {
+                wake(ptr::addr_of_mut!((*b).__u.__vi[0]), 1, 1);
+            }
+            a_store(ptr::addr_of_mut!((*inst).last), 1);
+            if ptr::read_volatile(&(*inst).waiters) != 0 {
+                wake(ptr::addr_of_mut!((*inst).last), -1, 1);
+            }
+        } else {
+            a_store(ptr::addr_of_mut!((*b).__u.__vi[0]), 0);
+            if (*b)._b_waiters() != 0 {
+                wake(ptr::addr_of_mut!((*b).__u.__vi[0]), 1, 1);
+            }
+            wait(ptr::addr_of_mut!((*inst).last), ptr::addr_of_mut!((*inst).waiters), 0, 1);
+        }
+
+        if a_fetch_add(ptr::addr_of_mut!((*inst).count), -1)==1 && a_fetch_add(ptr::addr_of_mut!((*inst).finished), 1)!=0 {
+            wake(ptr::addr_of_mut!((*inst).finished), 1, 1);
+        }
+    }
+
     0
 }

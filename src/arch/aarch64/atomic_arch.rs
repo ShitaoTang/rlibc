@@ -262,3 +262,9 @@ pub extern "C" fn a_swap(p: *mut c_int, v: c_int) -> c_int {
     }
     old
 }
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_spin() -> () {
+    a_barrier();
+}
