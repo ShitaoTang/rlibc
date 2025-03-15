@@ -2,9 +2,10 @@ use libc::PTHREAD_MUTEX_NORMAL;
 use libc::{uintptr_t, c_int, c_uchar, c_void, size_t, c_long, c_char, c_ulong, sigset_t, c_uint};
 use core::arch::asm;
 use core::ptr;
-use crate::arch::aarch64::syscall_arch::*;
-use crate::arch::aarch64::atomic_arch::*;
-use crate::thread::aarch64::syscall_cp::*;
+
+use crate::arch::syscall_arch::*;
+use crate::arch::atomic_arch::*;
+use crate::thread::syscall_cp::*;
 
 #[repr(C)]
 pub struct __ptcb {
