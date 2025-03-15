@@ -1,16 +1,30 @@
 use libc::PTHREAD_MUTEX_NORMAL;
 use libc::{uintptr_t, c_int, c_uchar, c_void, size_t, c_long, c_char, c_ulong, sigset_t, c_uint};
 use core::arch::asm;
-use core::option::Option;
 use core::ptr;
 use crate::arch::aarch64::syscall_arch::*;
 use crate::arch::aarch64::atomic_arch::*;
+use crate::thread::aarch64::syscall_cp::*;
 
 #[repr(C)]
 pub struct __ptcb {
-    pub __f: Option<extern "C" fn(*mut c_void) -> *mut c_void>,
+    pub __f: extern "C" fn(*mut c_void) -> *mut c_void,
     pub __x: *mut c_void,
     pub __next: *mut __ptcb,
+}
+
+extern "C" fn default_fn(_: *mut c_void) -> *mut c_void {
+    ptr::null_mut()
+}
+
+impl __ptcb {
+    pub fn new() -> Self {
+        __ptcb {
+            __f: default_fn,
+            __x: ptr::null_mut(),
+            __next: ptr::null_mut(),
+        }
+    }
 }
 
 #[repr(C)]
@@ -285,43 +299,6 @@ pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
     }
 
     r
-}
-
-#[inline(always)]
-#[no_mangle]
-pub unsafe extern "C" fn __syscall_cp_asm(cancel_ptr: *const i32, nr: i64, u: i64, v: i64, w: i64, x: i64, y: i64, z: i64) -> i64
-{
-    let result: i64;
-    asm!(
-        "ldr w0, [{cancel_ptr}]",
-        "cbnz w0, 1f",
-        "mov x8, {nr}",
-        "mov x0, {u}",
-        "mov x1, {v}",
-        "mov x2, {w}",
-        "mov x3, {x}",
-        "mov x4, {y}",
-        "mov x5, {z}",
-        "svc #0",
-        "b 2f",
-        "1:",
-        "bl cancel",
-        "2:",
-
-        cancel_ptr = in(reg) cancel_ptr,
-        nr = in(reg) nr,
-        u = in(reg) u,
-        v = in(reg) v,
-        w = in(reg) w,
-        x = in(reg) x,
-        y = in(reg) y,
-        z = in(reg) z,
-
-        out("x0") result,
-
-        clobber_abi("C"),
-    );
-    result
 }
 
 #[repr(C)]
@@ -1714,3 +1691,30 @@ pub extern "C" fn pthread_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
 
     0
 }
+
+// #[no_mangle]
+// pub extern "C" fn pthread_cleanup_push(f: extern "C" fn(*mut c_void) -> *mut c_void, x: *mut c_void) -> ()
+// {
+//     let mut __cb: __ptcb = __ptcb::new();
+//     _pthread_cleanup_push(&mut __cb, f, x);
+// }
+
+// #[no_mangle]
+// pub extern "C" fn _pthread_cleanup_push(cb: *mut __ptcb, f: extern "C" fn(*mut c_void) -> *mut c_void, x: *mut c_void) -> ()
+// {
+//     unsafe {
+//         (*cb).__f = f;
+//         (*cb).__x = x;
+//         __do_cleanup_push(cb);
+//     }
+// }
+
+// #[no_mangle]
+// pub extern "C" fn __do_cleanup_push(cb: *mut __ptcb) -> ()
+// {
+//     let _self: pthread_t = pthread_self();
+//     unsafe {
+//         (*cb).__next = (*_self).cancelbuf;
+//         (*_self).cancelbuf = cb;
+//     }
+// }
