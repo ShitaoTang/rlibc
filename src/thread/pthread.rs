@@ -1,11 +1,11 @@
 use libc::PTHREAD_MUTEX_NORMAL;
 use libc::{uintptr_t, c_int, c_uchar, c_void, size_t, c_long, c_char, c_ulong, sigset_t, c_uint};
-use core::arch::asm;
 use core::ptr;
 
 use crate::arch::syscall_arch::*;
 use crate::arch::atomic_arch::*;
 use crate::thread::syscall_cp::*;
+use crate::thread::pthread_arch::*;
 
 #[repr(C)]
 pub struct __ptcb {
@@ -255,20 +255,12 @@ impl pthread_attr_t {
 // }
 
 
-#[inline(always)]
-pub fn __get_up() -> uintptr_t
-{
-    let tp: uintptr_t;
-    unsafe {
-        asm!("mrs {}, TPIDR_EL0", out(reg) tp);
-    }
-    tp
-}
+
 
 #[no_mangle]
 pub extern "C" fn pthread_self() -> pthread_t
 {
-    (__get_up() - core::mem::size_of::<pthread>() as uintptr_t - TP_OFFSET as uintptr_t) as pthread_t
+    (__get_tp() - core::mem::size_of::<pthread>() as uintptr_t - TP_OFFSET as uintptr_t) as pthread_t
 }
 
 #[no_mangle]
@@ -293,7 +285,7 @@ pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
         return __syscall6(nr, u, v, w, x, y, z);
     }
 
-    unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     r = __syscall_cp_asm(ptr::addr_of!((*_self).cancel), nr, u, v, w, x, y, z);
     if r==-libc::EINTR as c_long && nr!=libc::SYS_close && (*_self).cancel!=0 && (*_self).canceldisable != PTHREAD_CANCEL_DISABLE as u8{
         r = cancel();
@@ -539,9 +531,9 @@ fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pt
 
 pub extern "C" fn futex4(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int
 {
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     let res = unsafe {__syscall4(libc::SYS_futex, addr as c_long, op as c_long, val as c_long, to as c_long)};
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     res as c_int
 }
 
@@ -550,11 +542,11 @@ pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: libc::clockid_t, 
     let mut cs: c_int = 0;
     let r: c_int;
 
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &mut cs);
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     r = timedwait_cp(addr, val, clk, at, lock_priv);
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     pthread_setcancelstate(cs, ptr::null_mut());
     r
 }
@@ -564,7 +556,7 @@ pub extern "C" fn pthread_setcancelstate(new: c_int, old: *mut c_int) -> c_int
 {
     if new as c_uint > 2u32 {return libc::EINVAL;}   // trick, only when 0<=new<=2, it's valid (negatives are invalid)
     let mut _self: pthread_t = pthread_self();
-    unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     if old != ptr::null_mut() { unsafe  {*old = ptr::read_volatile(ptr::addr_of_mut!((*_self).canceldisable)) as c_int};}
     unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).canceldisable), new as c_uchar)};
     0
@@ -592,7 +584,7 @@ pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_
         top = &mut to;
     }
 
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     r = -futex4_cp(addr as *mut c_void, libc::FUTEX_WAIT|lock_priv, val, top);
 
     if r != libc::EINTR && r!= libc::ETIMEDOUT && r != libc::ECANCELED {r = 0;}
@@ -623,13 +615,13 @@ pub extern "C" fn clock_gettime(clk: libc::clockid_t, ts: *mut libc::timespec) -
 #[no_mangle]
 pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int
 {
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     let r: c_int = unsafe {
         __syscall6(libc::SYS_futex, addr as c_long, op as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int
     };
     if r != -libc::ENOSYS {return r;}
     let tmp = (op as c_int) & !(FUTEX_PRIVATE as c_int);
-    unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     unsafe {__syscall6(libc::SYS_futex, addr as c_long, tmp as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int}
 }
 
@@ -641,7 +633,7 @@ pub extern "C" fn pthread_mutex_timedlock_pi(m: *mut pthread_mutex_t, at: *const
     let mut _self: pthread_t = pthread_self();
     let mut e: c_int;
 
-    unsafe{if m.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if m.is_null() { asm!("brk #0", options(noreturn)); }}
     if lock_priv == 0 {
         unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending), ptr::read_volatile(ptr::addr_of_mut!((*m).__u.__p[4])))};
     }
@@ -702,7 +694,7 @@ pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
         }
         if lock_type&4 != 0 && (old&0x40000000) != 0 {new = 0x7fffffff;}
         if lock_priv == 0 {
-            unsafe{if m.is_null() { asm!("brk #0", options(noreturn)); }}
+            // unsafe{if m.is_null() { asm!("brk #0", options(noreturn)); }}
             unsafe {
                 ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.head), ptr::read_volatile(ptr::addr_of_mut!((*m).__u.__p[4])));
                 vm_lock();
@@ -714,9 +706,9 @@ pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
             ptr::write_volatile(ptr::addr_of_mut!(prev), next);
         }
 
-        unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
-        unsafe{if next.is_null() { asm!("brk #0", options(noreturn)); }}
-        unsafe{if prev.is_null() { asm!("brk #0", options(noreturn)); }}
+        // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
+        // unsafe{if next.is_null() { asm!("brk #0", options(noreturn)); }}
+        // unsafe{if prev.is_null() { asm!("brk #0", options(noreturn)); }}
         if next != unsafe { ptr::read_volatile(ptr::addr_of_mut!((*_self).robust_list.head)) } {
             unsafe {
                 *((next as *mut u8).offset(-(core::mem::size_of::<*mut c_void>() as isize))
@@ -1315,7 +1307,7 @@ pub extern "C" fn pthread_testcancel() -> ()
 pub extern "C" fn testcancel() -> ()
 {
     let _self: pthread_t = pthread_self();
-    unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     if unsafe{ptr::read_volatile(ptr::addr_of_mut!((*_self).cancel))} != 0 && unsafe{ptr::read_volatile(ptr::addr_of!((*_self).canceldisable))} == 0 {
         cancel();
     } 
@@ -1325,7 +1317,7 @@ pub extern "C" fn testcancel() -> ()
 pub extern "C" fn cancel() -> c_long
 {
     let _self: pthread_t = pthread_self();
-    unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
+    // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     unsafe {
         if {ptr::read_volatile(ptr::addr_of!((*_self).canceldisable))} == PTHREAD_CANCEL_ENABLE as u8
         || {ptr::read_volatile(ptr::addr_of!((*_self).cancelasync))} != 0 {

@@ -58,7 +58,7 @@ pub extern "C" fn a_fetch_add(p: *mut c_int, v: c_int) -> c_int
     let old: c_int;
     unsafe {
         asm!(
-            "lock xadd {0:e}, [{1}]",
+            "lock xadd [{1}], {0:e}",
             inout(reg) v => old,
             in(reg) p,
             options(nostack)
