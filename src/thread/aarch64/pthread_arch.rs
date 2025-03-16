@@ -1,4 +1,4 @@
-use core::arch::aarch64::*;
+use core::arch::asm;
 use libc::uintptr_t;
 
 #[inline(always)]
