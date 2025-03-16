@@ -4,7 +4,7 @@ use crate::thread::pthread::*;
 
 pub fn __syscall_ret(r: c_ulong) -> c_long
 {
-    if r > 0xfffffffffffff000 as c_ulong {  // -4096UL
+    if r > (!0-4095) as c_ulong {
         let _self: pthread_t = pthread_self();
         unsafe {
             (*_self).errno_val = r as c_int;
