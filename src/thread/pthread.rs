@@ -280,14 +280,14 @@ pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
     let mut r: c_long;
     let st: c_int;
 
-    st = unsafe {(*_self).canceldisable as c_int};
+    st = (*_self).canceldisable as c_int;
     if st != 0 && (st==PTHREAD_CANCEL_DISABLE || nr==libc::SYS_close) {
         return __syscall6(nr, u, v, w, x, y, z);
     }
 
     // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
     r = __syscall_cp_asm(ptr::addr_of!((*_self).cancel), nr, u, v, w, x, y, z);
-    if r==-libc::EINTR as c_long && nr!=libc::SYS_close && (*_self).cancel!=0 && (*_self).canceldisable != PTHREAD_CANCEL_DISABLE as u8{
+    if r==-libc::EINTR as c_long && nr!=libc::SYS_close && (*_self).cancel!=0 && (*_self).canceldisable != PTHREAD_CANCEL_DISABLE as u8 {
         r = cancel();
     }
 
