@@ -8,6 +8,7 @@ use core::panic::PanicInfo;
 pub mod thread;
 pub mod arch;
 pub mod internal;
+pub mod network;
 
 #[cfg(not(test))]
 #[panic_handler]
