@@ -60,9 +60,18 @@ pub type locale_t = *mut __locale_struct;
 #[repr(C)]
 pub struct pthread {
     pub _self:  *mut pthread,
-    pub prev:   *mut pthread,
-    pub next:   *mut pthread,
-    pub sysinfo:    uintptr_t,
+
+    #[cfg(target_arch = "x86_64")]
+    pub dtv:            *mut uintptr_t,
+
+    pub prev:           *mut pthread,
+    pub next:           *mut pthread,
+    pub sysinfo:        uintptr_t,
+
+    #[cfg(target_arch = "x86_64")]
+    pub canary:         uintptr_t,
+
+    /* Part 2  */
 
     pub tid:            c_int,
     pub errno_val:      c_int,
@@ -88,7 +97,9 @@ pub struct pthread {
     pub dlerror_buf:    *mut c_char,
     pub stdio_locks:    *mut c_void,
 
+    #[cfg(target_arch = "aarch64")]
     pub canary:     uintptr_t,
+    #[cfg(target_arch = "aarch64")]
     pub dtv:    *mut uintptr_t,
 }
 
@@ -256,11 +267,18 @@ impl pthread_attr_t {
 
 
 
-
+#[cfg(target_arch = "aarch64")]
 #[no_mangle]
 pub extern "C" fn pthread_self() -> pthread_t
 {
     (__get_tp() - core::mem::size_of::<pthread>() as uintptr_t - TP_OFFSET as uintptr_t) as pthread_t
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+pub extern "C" fn pthread_self() -> pthread_t
+{
+    (__get_tp()) as pthread_t
 }
 
 #[no_mangle]
@@ -272,11 +290,13 @@ pub extern "C" fn get_tid(t: pthread_t) -> c_int
 pub type syscall_arg_t = c_long;
 
 #[no_mangle]
-pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
+pub unsafe extern "C" fn __syscall_cp_c(nr: syscall_arg_t,
                              u: syscall_arg_t, v: syscall_arg_t, w: syscall_arg_t,
                              x: syscall_arg_t, y: syscall_arg_t, z: syscall_arg_t) -> c_long 
 {
-    let _self: pthread_t = pthread_self();
+    // let mut _self: pthread_t = pthread_self();
+    let mut _self: pthread_t = ptr::null_mut();
+    _self = pthread_self();
     let mut r: c_long;
     let st: c_int;
 
@@ -286,7 +306,7 @@ pub unsafe fn __syscall_cp_c(nr: syscall_arg_t,
     }
 
     // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}
-    r = __syscall_cp_asm(ptr::addr_of!((*_self).cancel), nr, u, v, w, x, y, z);
+    r = __syscall_cp_asm(ptr::addr_of!((*_self).cancel) as *const i32, nr, u, v, w, x, y, z);
     if r==-libc::EINTR as c_long && nr!=libc::SYS_close && (*_self).cancel!=0 && (*_self).canceldisable != PTHREAD_CANCEL_DISABLE as u8 {
         r = cancel();
     }
