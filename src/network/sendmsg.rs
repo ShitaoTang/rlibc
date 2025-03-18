@@ -1,6 +1,6 @@
-use libc::{c_int, c_void, size_t, ssize_t, c_long};
+use libc::{c_int, c_void, ssize_t, c_long};
 use crate::{internal::syscall::socketcall_cp, network::{CMSG_FIRSTHDR, CMSG_NEXTHDR}, thread::pthread::pthread_self};
-use super::{cmsghdr, msghdr, sockaddr, socklen_t, CMSG_SPACE};
+use super::{cmsghdr, msghdr, CMSG_SPACE};
 use core::mem::size_of;
 
 #[no_mangle]
