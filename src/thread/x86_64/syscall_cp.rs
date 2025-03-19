@@ -1,6 +1,5 @@
 use core::arch::asm;
 use crate::thread::pthread::cancel;
-use libc::c_void;
 
 #[inline(always)]
 #[no_mangle]
