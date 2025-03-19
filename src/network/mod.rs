@@ -81,6 +81,11 @@ pub const fn CMSG_SPACE(len: usize) -> usize
     CMSG_ALIGN(len) + CMSG_ALIGN(core::mem::size_of::<cmsghdr>())
 }
 
+pub const fn CMSG_LEN(len: usize) -> usize
+{
+    CMSG_ALIGN(core::mem::size_of::<cmsghdr>()) + len
+}
+
 pub fn __CMSG_LEN(cmsg: *const cmsghdr) -> size_t
 {
     // (len + alignmeng) & !alignment
@@ -100,6 +105,13 @@ pub fn __MHDR_END(mhdr: *const msghdr) -> *mut c_uchar
 {
     unsafe {
         ((*mhdr).msg_control as *mut c_uchar).add((*mhdr).msg_controllen as usize)
+    }
+}
+
+pub fn CMSG_DATA(cmsg: *const cmsghdr) -> *mut c_uchar
+{
+    unsafe {
+        (cmsg as *mut cmsghdr).add(1) as *mut c_uchar
     }
 }
 
