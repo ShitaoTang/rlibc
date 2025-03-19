@@ -7,12 +7,16 @@ pub mod connect;
 pub mod sendto;
 pub mod send;
 pub mod sendmsg;
+pub mod sendmmsg;
 pub mod recvfrom;
 pub mod recv;
 pub mod recvmsg;
+pub mod recvmmsg;
 
 type sa_family_t = c_ushort;
 type socklen_t = c_uint;
+
+pub const IOV_MAX: c_int = 1024;
 
 // 2B+14B=16B, better for alignment
 #[repr(C)]
@@ -25,6 +29,12 @@ pub struct sockaddr {
 pub struct iovec {
     pub iov_base: *mut c_void,
     pub iov_len: size_t,
+}
+
+#[repr(C)]
+pub struct mmsghdr {
+    pub msg_hdr: msghdr,
+    pub msg_len: c_uint,
 }
 
 #[repr(C)]
