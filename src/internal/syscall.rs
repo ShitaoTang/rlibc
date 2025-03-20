@@ -5,6 +5,9 @@ use super::syscall_ret::*;
 
 type syscall_arg_t = c_long;
 
+pub const SO_RCVTIMEO_OLD: c_int = 20;
+pub const SO_SNDTIMEO_OLD: c_int = 21;
+
 pub const SO_TIMESTAMP_OLD: c_int = 29;
 pub const SO_TIMESTAMPNS_OLD: c_int = 35;
 pub const SO_TIMESTAMPING_OLD: c_int = 37;

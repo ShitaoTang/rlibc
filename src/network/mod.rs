@@ -12,6 +12,11 @@ pub mod recvfrom;
 pub mod recv;
 pub mod recvmsg;
 pub mod recvmmsg;
+pub mod getsockname;
+pub mod getpeername;
+pub mod getsockopt;
+pub mod setsockopt;
+pub mod shutdown;
 
 type sa_family_t = c_ushort;
 type socklen_t = c_uint;
