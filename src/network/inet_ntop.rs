@@ -63,8 +63,8 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
             i += 1;
         }
         if max > 3 {
-            buf[best as usize] = b':';
-            buf[(best+1) as usize] = b':';
+            buf[best as usize] = b':'.try_into().unwrap();
+            buf[(best+1) as usize] = b':'.try_into().unwrap();
             libc::memmove(buf.as_mut_ptr().add(best+2) as *mut c_void, 
                      buf.as_ptr().add(best+max) as *const c_void, (i-best-max+1) as usize);
         }

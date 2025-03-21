@@ -13,16 +13,17 @@ pub extern "C" fn inet_ntoa(_in: in_addr) -> *const c_char
     let a = &_in.s_addr.to_ne_bytes() as &[u8; 4];
     let fmt = b"%d.%d.%d.%d\0"; // this C-string should end with '\0'
     unsafe {
+        let buf_ptr = core::ptr::addr_of_mut!(buf) as *mut c_uchar as *mut c_char;
         libc::snprintf(
-            buf.as_mut_ptr(),
-             buf.len() as usize,
-             fmt.as_ptr() as *const c_char,
-             a[0] as c_int,
-             a[1] as c_int,
-             a[2] as c_int,
-             a[3] as c_int
+            buf_ptr,
+            16,
+            fmt.as_ptr() as *const c_char,
+            a[0] as c_int,
+            a[1] as c_int,
+            a[2] as c_int,
+            a[3] as c_int,
         );
-        buf.as_ptr() as *const c_char
+        buf_ptr as *const c_char
     }
 }
 

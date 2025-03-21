@@ -41,14 +41,14 @@ pub extern "C" fn inet_pton(af: c_int, s: *const c_char, a0: *mut c_void) -> c_i
     if af == AF_INET {
         while i < 4 {
             v = 0; j = 0;
-            while j<3 && isdigit(*s.offset(j as isize)) {
-                v = v*10 + (*s.offset(j as isize) - b'0') as c_int;
+            while j < 3 && isdigit((*s.offset(j as isize)).try_into().unwrap()) {
+                v = v*10 + (*s.offset(j as isize) as u8 - b'0') as c_int;
                 j += 1;
             }
-            if j==0 || (j>1 && *s.offset(0) == b'0') || v > 255 { return 0; }
+            if j==0 || (j>1 && *s.offset(0) == b'0'.try_into().unwrap()) || v > 255 { return 0; }
             *a.offset(i as isize) = v as c_uchar;
             if *s.offset(j as isize)==0 && i==3 { return 1; }
-            if *s.offset(j as isize) != b'.' { return 0; }
+            if *s.offset(j as isize) != b'.'.try_into().unwrap() { return 0; }
             s = s.offset(j as isize + 1);
             i += 1;
         }
@@ -58,11 +58,11 @@ pub extern "C" fn inet_pton(af: c_int, s: *const c_char, a0: *mut c_void) -> c_i
         return -1;
     }
 
-    if *s==b':' && {s=s.offset(1); *s!=b':'} { return 0; }
+    if *s==b':'.try_into().unwrap() && {s=s.offset(1); *s!=b':'.try_into().unwrap()} { return 0; }
 
     i = 0;
     loop {
-        if *s==b':' && brk<0 {
+        if *s==b':'.try_into().unwrap() && brk<0 {
             brk = i;
             ip[(i&7) as usize] = 0;
             s = s.offset(1);
@@ -73,7 +73,7 @@ pub extern "C" fn inet_pton(af: c_int, s: *const c_char, a0: *mut c_void) -> c_i
         }
         v = 0; j = 0;
         while j < 4 {
-            let d = hexval(*s.offset(j as isize));
+            let d = hexval((*s.offset(j as isize)).try_into().unwrap());
             if d < 0 { break; }
             v = (v << 4) + d;
             j += 1;
@@ -82,8 +82,8 @@ pub extern "C" fn inet_pton(af: c_int, s: *const c_char, a0: *mut c_void) -> c_i
         ip[(i&7) as usize] = v as uint16_t;
         if *s.offset(j as isize)==0 && (brk>=0 || i==7) { break; }
         if i == 7 { return 0; }
-        if *s.offset(j as isize) != b':' {
-            if *s.offset(j as isize) != b'.' || (i<6 && brk<0) { return 0; }
+        if *s.offset(j as isize) != b':'.try_into().unwrap() {
+            if *s.offset(j as isize) != b'.'.try_into().unwrap() || (i<6 && brk<0) { return 0; }
             need_v4 = 1;
             i += 1;
             ip[(i&7) as usize] = 0;

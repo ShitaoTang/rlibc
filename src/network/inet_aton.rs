@@ -17,7 +17,11 @@ pub extern "C" fn inet_aton(s0: *const c_char, dest: *mut in_addr) -> c_int
 
     while i < 4 {
         a[i as usize] = unsafe { libc::strtoul(s, &mut z, 0) };
-        if z as *const c_uchar == s || unsafe{(*z)!=0 && (*z)!=b'.'} || unsafe{(*s) as u32 - '0' as u32 >= 10} { return 0; }
+        if z as *const c_uchar == s as *const c_uchar
+         || unsafe{(*z)!=0 && (*z)!=b'.'.try_into().unwrap()}
+         || unsafe{(*s as u8) as u32 - '0' as u32 >= 10} { 
+            return 0;
+        }
         if unsafe{(*z)==0} { break; }
         s = unsafe{z.offset(1)};
         i += 1;
