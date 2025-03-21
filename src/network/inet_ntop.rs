@@ -55,7 +55,9 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
         }
         while buf[i] != 0 {
             if i!=0 && buf[i]!=b':' as c_char { i += 1; continue; }
-            j = libc::strspn(buf.as_ptr().add(i), b":0".as_ptr() as *const c_char) as c_int; 
+            // the accept string should end with '\0', otherwise it will lead to UB --- reading uninitialized memory
+            // for zero compressed IPv6 address
+            j = libc::strspn(buf.as_ptr().add(i), b":0\0".as_ptr() as *const c_char) as c_int; 
             if j > max as c_int {
                 best = i;
                 max = j as usize;
