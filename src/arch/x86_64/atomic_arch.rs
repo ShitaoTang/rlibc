@@ -1,5 +1,5 @@
 use core::arch::asm;
-use libc::{c_int, c_void};
+use crate::include::ctype::*;
 
 #[inline(always)]
 #[no_mangle]

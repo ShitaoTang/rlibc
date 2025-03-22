@@ -1,4 +1,4 @@
-use libc::{c_int, c_long, c_uint, c_ulong, ssize_t};
+use crate::include::ctype::*;
 use crate::{network::{mmsghdr, sendmsg::sendmsg}, thread::pthread::__syscall_cp_c};
 use super::IOV_MAX;
 use crate::internal::syscall_ret::*;

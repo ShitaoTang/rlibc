@@ -1,5 +1,4 @@
-use libc::{c_int, c_long};
-
+use crate::include::ctype::*;
 use super::{sockaddr, socklen_t};
 use crate::internal::syscall::socketcall;
 

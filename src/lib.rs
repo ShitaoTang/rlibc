@@ -6,6 +6,7 @@
 #[allow(unused_imports)]
 use core::panic::PanicInfo;
 
+pub mod include;
 pub mod thread;
 pub mod arch;
 pub mod internal;

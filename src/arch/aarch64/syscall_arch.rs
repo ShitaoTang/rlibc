@@ -1,5 +1,5 @@
 use core::arch::asm;
-use libc::c_long;
+use crate::include::ctype::*;
 
 #[inline(always)]
 pub unsafe fn __syscall0(n: c_long) -> c_long {

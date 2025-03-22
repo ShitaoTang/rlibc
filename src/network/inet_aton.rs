@@ -1,4 +1,4 @@
-use libc::{c_char, c_int, c_uchar, c_ulong};
+use crate::include::ctype::*;
 use super::in_addr;
 
 // ASCII string -> Network byte order

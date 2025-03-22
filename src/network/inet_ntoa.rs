@@ -1,4 +1,4 @@
-use libc::{c_char, c_int, c_uchar};
+use crate::include::ctype::*;
 use super::in_addr;
 
 static mut buf: [c_uchar; 16] = [0; 16];    // considering its lifetime

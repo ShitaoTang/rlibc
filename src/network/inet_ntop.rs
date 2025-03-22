@@ -1,4 +1,4 @@
-use libc::{c_int, c_uchar, c_char, c_void};
+use crate::include::ctype::*;
 use super::*;
 use crate::thread::pthread::pthread_self;
 

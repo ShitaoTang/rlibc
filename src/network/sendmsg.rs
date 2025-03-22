@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, ssize_t, c_long};
+use crate::include::ctype::*;
 use crate::{internal::syscall::socketcall_cp, network::{CMSG_FIRSTHDR, CMSG_NEXTHDR}, thread::pthread::pthread_self};
 use super::{cmsghdr, msghdr, CMSG_SPACE};
 use core::mem::size_of;

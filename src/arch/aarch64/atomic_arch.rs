@@ -1,6 +1,5 @@
 use core::arch::asm;
-use libc::c_int;
-use libc::c_void;
+use crate::include::ctype::*;
 
 // Load-Acquire Exclusive Register
 // v <- *p

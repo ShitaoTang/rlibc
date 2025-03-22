@@ -1,5 +1,4 @@
-use libc::{c_int, c_long, c_ulong};
-
+use crate::include::ctype::*;
 use crate::thread::pthread::*;
 
 pub fn __syscall_ret(r: c_ulong) -> c_long

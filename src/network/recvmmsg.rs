@@ -1,4 +1,4 @@
-use libc::{c_int, c_long, c_uint, c_ulong};
+use crate::include::ctype::*;
 use super::mmsghdr;
 use crate::internal::syscall_ret::*;
 use crate::thread::pthread::__syscall_cp_c;

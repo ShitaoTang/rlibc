@@ -1,5 +1,4 @@
-use libc::{self, c_long};
-use libc::c_int;
+use crate::include::ctype::*;
 use crate::internal::syscall::__socketcall;
 use crate::internal::syscall_ret::__syscall_ret;
 use crate::arch::syscall_arch::*;

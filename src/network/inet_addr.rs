@@ -1,5 +1,5 @@
 use super::{in_addr, in_addr_t};
-use libc::c_char;
+use crate::include::ctype::*;
 use super::inet_aton::inet_aton;
 
 // string in dotted-decimal notation -> 32-bit integer in network byte order

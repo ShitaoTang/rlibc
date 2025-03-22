@@ -1,6 +1,6 @@
 use crate::internal::syscall::{SCM_TIMESTAMPNS_OLD, SCM_TIMESTAMP_OLD, socketcall_cp};
 use super::{cmsghdr, msghdr, socklen_t, CMSG_DATA, CMSG_SPACE, CMSG_LEN};
-use libc::{c_void, c_long, c_longlong, c_int, ssize_t};
+use crate::include::ctype::*;
 
 // SCM: Socket Control Message
 fn __convert_scm_timestamps(msg: *mut msghdr, csize: socklen_t) -> ()

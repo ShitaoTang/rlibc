@@ -1,5 +1,5 @@
 use core::ptr;
-use libc::{c_int, size_t, ssize_t, c_void};
+use crate::include::ctype::*;
 use super::sendto::sendto;
 
 #[no_mangle]

@@ -1,9 +1,7 @@
-use libc::{c_int, c_long};
+use crate::include::ctype::*;
 use crate::arch::syscall_arch::*;
 use crate::thread::pthread::*;
 use super::syscall_ret::*;
-
-type syscall_arg_t = c_long;
 
 pub const SO_RCVTIMEO_OLD: c_int = 20;
 pub const SO_SNDTIMEO_OLD: c_int = 21;

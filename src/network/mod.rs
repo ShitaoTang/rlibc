@@ -1,4 +1,4 @@
-use libc::{c_char, c_int, c_uchar, c_uint, c_ushort, c_void, size_t, c_long};
+use crate::include::ctype::*;
 
 pub mod socket;
 pub mod bind;
@@ -27,10 +27,6 @@ type sa_family_t = c_ushort;
 type socklen_t = c_uint;
 type in_port_t = c_ushort;
 type in_addr_t = c_uint;
-type uint8_t = c_uchar;
-type uint16_t = in_port_t;
-#[allow(dead_code)]
-type uint32_t = in_addr_t;
 
 pub const IOV_MAX: c_int = 1024;
 

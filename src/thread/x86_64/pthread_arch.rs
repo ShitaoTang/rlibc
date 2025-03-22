@@ -1,5 +1,5 @@
 use core::arch::asm;
-use libc::uintptr_t;
+use crate::include::ctype::*;
 
 #[inline(always)]
 pub fn __get_tp() -> uintptr_t

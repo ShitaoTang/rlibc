@@ -1,4 +1,4 @@
-use libc::{c_int, c_long, c_void};
+use crate::include::ctype::*;
 use crate::internal::{syscall::{socketcall, SO_RCVTIMEO_OLD, SO_SNDTIMEO_OLD, SO_TIMESTAMP_OLD, SO_TIMESTAMPNS_OLD}, syscall_ret::__syscall_ret};
 use super::socklen_t;
 

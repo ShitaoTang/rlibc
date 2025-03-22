@@ -1,4 +1,4 @@
-use libc::{c_int, c_long};
+use crate::include::ctype::*;
 
 use crate::internal::syscall::socketcall;
 

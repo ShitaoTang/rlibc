@@ -1,6 +1,6 @@
 use libc::PTHREAD_MUTEX_NORMAL;
-use libc::{uintptr_t, c_int, c_uchar, c_void, size_t, c_long, c_char, c_ulong, sigset_t, c_uint};
 use core::ptr;
+use crate::include::ctype::*;
 
 use crate::arch::syscall_arch::*;
 use crate::arch::atomic_arch::*;
@@ -286,8 +286,6 @@ pub extern "C" fn get_tid(t: pthread_t) -> c_int
 {
     unsafe {(*t).tid}
 }
-
-pub type syscall_arg_t = c_long;
 
 #[no_mangle]
 pub unsafe extern "C" fn __syscall_cp_c(nr: syscall_arg_t,
