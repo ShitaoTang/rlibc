@@ -1,5 +1,5 @@
 use core::arch::asm;
-use crate::thread::pthread::cancel;
+use super::super::pthread_cancel::cancel;
 
 #[inline(always)]
 #[no_mangle]

@@ -1,7 +1,7 @@
 use crate::include::ctype::*;
 use super::mmsghdr;
 use crate::internal::syscall_ret::*;
-use crate::thread::pthread::__syscall_cp_c;
+use crate::thread::pthread_cancel::__syscall_cp_c;
 
 #[no_mangle]
 pub extern "C" fn recvmmsg(fd: c_int, msgvec: *mut mmsghdr, vlen: c_uint, flags: c_uint, timeout: *mut libc::timespec) -> c_int

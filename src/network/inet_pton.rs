@@ -1,5 +1,5 @@
 use crate::include::ctype::*;
-use crate::thread::pthread::pthread_self;
+use crate::thread::pthread_self::pthread_self;
 use super::*;
 
 fn isdigit(c: u8) -> bool

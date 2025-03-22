@@ -1,6 +1,6 @@
 use crate::include::ctype::*;
 use super::*;
-use crate::thread::pthread::pthread_self;
+use crate::thread::pthread_self::pthread_self;
 
 // Network byte order -> Presentation format
 // binary IP addr (IPv4/IPv6) -> human-readable IP addr

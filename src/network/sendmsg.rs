@@ -1,5 +1,7 @@
 use crate::include::ctype::*;
-use crate::{internal::syscall::socketcall_cp, network::{CMSG_FIRSTHDR, CMSG_NEXTHDR}, thread::pthread::pthread_self};
+use crate::internal::syscall::socketcall_cp;
+use crate::network::{CMSG_FIRSTHDR, CMSG_NEXTHDR};
+use crate::thread::pthread_self::pthread_self;
 use super::{cmsghdr, msghdr, CMSG_SPACE};
 use core::mem::size_of;
 

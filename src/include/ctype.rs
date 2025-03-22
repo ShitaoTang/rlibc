@@ -1,3 +1,6 @@
+use core::ptr;
+use crate::thread::pthread_impl::pthread;
+
 pub type c_schar = i8;
 pub type c_uchar = u8;
 pub type c_short = i16;
@@ -144,3 +147,201 @@ pub struct sigset_t {
 }
 
 pub type syscall_arg_t = c_long;
+
+#[allow(non_camel_case_types)]
+pub type pthread_t = *mut pthread;
+
+#[repr(C)]
+pub struct pthread_attr_t {
+    pub __u: ptau,
+}
+
+#[repr(C)]
+pub union ptau {
+    #[cfg(target_pointer_width = "64")]
+    pub __i: [c_int; 14],
+    #[cfg(target_pointer_width = "32")]
+    pub __i: [c_int; 9],
+    #[cfg(target_pointer_width = "64")]
+    pub __vi: [c_int; 14],                  // volatile int
+    #[cfg(target_pointer_width = "32")]
+    pub __vi: [c_int; 9],                   // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __s: [c_ulong; 7],
+    #[cfg(target_pointer_width = "32")]
+    pub __s: [c_ulong; 9],
+}
+
+impl pthread_attr_t {
+    pub fn _a_stacksize(&self) -> c_ulong {unsafe {self.__u.__s[0]}}
+    pub fn _a_guardsize(&self) -> c_ulong {unsafe {self.__u.__s[1]}}
+    pub fn _a_stackaddr(&self) -> c_ulong {unsafe {self.__u.__s[2]}}
+    pub fn _a_detach(&self) -> c_int { unsafe {self.__u.__i[3*__SU+0]}}
+    pub fn _a_sched(&self) -> c_int { unsafe {self.__u.__i[3*__SU+1]}}
+    pub fn _a_policy(&self) -> c_int { unsafe {self.__u.__i[3*__SU+2]}}
+    pub fn _a_prio(&self) -> c_int { unsafe {self.__u.__i[3*__SU+3]}}
+}
+
+// pub const __SU: usize = core::mem::size_of::<size_t>() / core::mem::size_of::<c_int>();
+#[cfg(target_pointer_width = "64")]
+pub const __SU: usize = 2;
+#[cfg(target_pointer_width = "32")]
+pub const __SU: usize = 1;
+
+pub const TP_OFFSET: usize = 0;
+
+pub const _NSIG: usize = 65;
+#[cfg(target_pointer_width = "64")]
+pub const SIGPT_SET_VALUE: [c_ulong; _NSIG/8/8] = [3u64 << 32];
+#[cfg(target_pointer_width = "32")]
+pub static SIGPT_SET_VALUE: [c_ulong; _NSIG/8/4] = [0, 3u64];
+pub const SIGPT_SET: *const sigset_t = SIGPT_SET_VALUE.as_ptr() as *const sigset_t;
+
+pub const FUTEX_PRIVATE: c_int = 128;
+
+#[repr(C)]
+pub struct pthread_mutex_t {
+    pub __u: ptmu,
+}
+
+#[repr(C)]
+pub union ptmu {
+    #[cfg(target_pointer_width = "64")]
+    pub __i: [c_int; 10],
+    #[cfg(target_pointer_width = "32")]
+    pub __i: [c_int; 6],
+    #[cfg(target_pointer_width = "64")]
+    pub __vi: [c_int; 10],                  // volatile int
+    #[cfg(target_pointer_width = "32")]
+    pub __vi: [c_int; 6],                   // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 5],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 6],              // volatile void *
+}
+
+impl pthread_mutex_t {
+    pub fn _m_type(&self) -> c_int { unsafe {self.__u.__i[0]}}
+    pub fn _m_lock(&self) -> c_int { unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
+    pub fn _m_waiters(&self) -> c_int { unsafe {ptr::read_volatile(&self.__u.__vi[2])}}
+    pub fn _m_prev(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[3])}}
+    pub fn _m_next(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[4])}}
+    pub fn _m_count(&self) -> c_int { unsafe {self.__u.__i[5]}}
+}
+
+#[repr(C)]
+pub struct pthread_mutexattr_t {
+    pub __attr: c_uint,
+}
+
+pub type pthread_spinlock_t = c_int;
+
+#[repr(C)]
+pub struct pthread_rwlock_t {
+    pub __u: ptrwu,
+}
+
+#[repr(C)]
+pub union ptrwu {
+    #[cfg(target_pointer_width = "64")]
+    pub __i: [c_int; 14],
+    #[cfg(target_pointer_width = "32")]
+    pub __i: [c_int; 8],
+    #[cfg(target_pointer_width = "64")]
+    pub __vi: [c_int; 14],                  // volatile int
+    #[cfg(target_pointer_width = "32")]
+    pub __vi: [c_int; 8],                   // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 7],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 8],              // volatile void *
+}
+
+impl pthread_rwlock_t {
+    pub fn _rw_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[0])}}
+    pub fn _rw_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
+    pub fn _rw_shared(&self) -> c_int {unsafe {self.__u.__i[2]}}
+}
+
+#[repr(C)]
+pub struct pthread_rwlockattr_t {
+    pub __attr: [c_uint; 2],
+}
+
+#[repr(C)]
+pub struct pthread_cond_t {
+    pub __u: ptcu,
+}
+
+#[repr(C)]
+pub union ptcu {
+    pub __i: [c_int; 12],
+    pub __vi: [c_int; 12],                  // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 6],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 12],              // volatile void *
+}
+
+impl pthread_cond_t {
+    pub fn _c_shared(&self) -> *mut c_void {unsafe {ptr::read_volatile(ptr::addr_of!(self.__u.__p[0]))}}
+    pub fn _c_seq(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[2])}}
+    pub fn _c_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
+    pub fn _c_clock(&self) -> c_int {unsafe {self.__u.__i[4]}}
+    pub fn _c_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[8])}}
+    pub fn _c_head(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[1])}}
+    pub fn _c_tail(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[5])}}
+}
+
+#[repr(C)]
+pub struct pthread_condattr_t {
+    pub __attr: c_uint,
+}
+
+#[repr(C)]
+pub struct pthread_barrier_t {
+    pub __u: pbtu,
+}
+
+#[repr(C)]
+pub union pbtu {
+    #[cfg(target_pointer_width = "64")]
+    pub __i: [c_int; 8],
+    #[cfg(target_pointer_width = "32")]
+    pub __i: [c_int; 5],
+    #[cfg(target_pointer_width = "64")]
+    pub __vi: [c_int; 8],                  // volatile int
+    #[cfg(target_pointer_width = "32")]
+    pub __vi: [c_int; 5],                   // volatile int
+    #[cfg(target_pointer_width = "64")]
+    pub __p: [*mut c_void; 4],              // volatile void *
+    #[cfg(target_pointer_width = "32")]
+    pub __p: [*mut c_void; 5],              // volatile void *
+}
+
+impl pthread_barrier_t {
+    pub fn _b_lock(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[0])}}
+    pub fn _b_waiters(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[1])}}
+    pub fn _b_limit(&self) -> c_int {unsafe {self.__u.__i[2]}}
+    pub fn _b_count(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[3])}}
+    pub fn _b_waiters2(&self) -> c_int {unsafe {ptr::read_volatile(&self.__u.__vi[4])}}
+    pub fn _b_inst(&self) -> *mut c_void {unsafe {ptr::read_volatile(&self.__u.__p[3])}}
+}
+
+#[repr(C)]
+pub struct pthread_barrierattr_t {
+    pub __attr: c_uint,
+}
+
+#[repr(C)]
+pub struct __locale_map;
+
+#[repr(C)]
+pub struct __locale_struct {
+    pub cat: [*const __locale_map; 6],
+}
+
+#[allow(non_camel_case_types)]
+pub type locale_t = *mut __locale_struct;
+
+pub type clockid_t = c_int;

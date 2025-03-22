@@ -1,6 +1,6 @@
 use crate::include::ctype::*;
 use crate::arch::syscall_arch::*;
-use crate::thread::pthread::*;
+use crate::thread::pthread_cancel::*;
 use super::syscall_ret::*;
 
 pub const SO_RCVTIMEO_OLD: c_int = 20;

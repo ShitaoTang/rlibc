@@ -1,5 +1,5 @@
 use crate::include::ctype::*;
-use crate::thread::pthread::*;
+use crate::thread::pthread_self::*;
 
 pub fn __syscall_ret(r: c_ulong) -> c_long
 {

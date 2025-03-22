@@ -1,5 +1,6 @@
 use crate::include::ctype::*;
-use crate::{network::{mmsghdr, sendmsg::sendmsg}, thread::pthread::__syscall_cp_c};
+use crate::network::{mmsghdr, sendmsg::sendmsg};
+use crate::thread::pthread_cancel::__syscall_cp_c;
 use super::IOV_MAX;
 use crate::internal::syscall_ret::*;
 
