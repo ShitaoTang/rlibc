@@ -16,9 +16,6 @@ pub mod time;
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    // unsafe {
-    //     libc::abort();
-    // }
     loop {}
 }
 

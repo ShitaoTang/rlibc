@@ -2,6 +2,7 @@ use crate::include::ctype::*;
 use crate::arch::syscall_arch::*;
 use crate::thread::pthread_cancel::*;
 use super::syscall_ret::*;
+use crate::arch::generic::bits::errno::*;
 
 pub const SO_RCVTIMEO_OLD: c_int = 20;
 pub const SO_SNDTIMEO_OLD: c_int = 21;
@@ -26,7 +27,7 @@ pub extern "C" fn __alt_socketall(sys: c_int, cp: c_int,
             r = __syscall6(sys as c_long, a, b, c, d, e, f);
         }
     }
-    if r != -libc::ENOSYS as c_long {
+    if r != -ENOSYS as c_long {
         return r;
     }
 

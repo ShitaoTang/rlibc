@@ -3,6 +3,8 @@ use core::ptr;
 use crate::arch::atomic_arch::*;
 use super::pthread_self::*;
 use crate::arch::syscall_arch::*;
+use crate::arch::generic::bits::errno::*;
+use crate::arch::syscall_bits::*;
 
 #[no_mangle]
 pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int
@@ -12,7 +14,7 @@ pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int
     }
 
     if (unsafe{(*m)._m_type()} & 15) == libc::PTHREAD_MUTEX_NORMAL{
-        return a_cas(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, 0, libc::EBUSY) & libc::EBUSY;
+        return a_cas(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, 0, EBUSY) & EBUSY;
     }
 
     return pthread_mutex_trylock_owner(m);
@@ -42,33 +44,37 @@ pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int
 
         if (lock_type & 3) == libc::PTHREAD_MUTEX_RECURSIVE {
             if unsafe{(*m)._m_count() as c_uint >= 0x7fffffff as c_uint} {
-                return libc::EAGAIN;
+                return EAGAIN;
             }
             unsafe {(*m).__u.__i[5] += 1};
             return 0;
         }
     }
 
-    if own == 0x3fffffff {return libc::ENOTRECOVERABLE;}
-    if own != 0 || (old != 0 && (lock_type & 4) == 0) {return libc::EBUSY;}
+    if own == 0x3fffffff {return ENOTRECOVERABLE;}
+    if own != 0 || (old != 0 && (lock_type & 4) == 0) {return EBUSY;}
 
     if (lock_type & 128) != 0 {
         if unsafe {(*_self).robust_list.off == 0} {
             unsafe {
                 // (*_self).robust_list.off = ((ptr::addr_of_mut!((*m).__u.__vi[1]) as usize) - (ptr::addr_of_mut!((*m).__u.__p[4]) as usize)) as c_long;
-                (*_self).robust_list.off = ((ptr::addr_of!((*m).__u.__vi) as *const i32).add(1) as *const u8).offset_from((ptr::addr_of!((*m).__u.__p) as *const *mut u8).add(4) as *const u8) as c_long;
-                __syscall2(libc::SYS_set_robust_list, ptr::addr_of_mut!((*_self).robust_list) as c_long, (3* core::mem::size_of::<c_long>()) as c_long);
+                (*_self).robust_list.off = ((ptr::addr_of!((*m).__u.__vi) as *const i32).add(1) as *const u8)
+                            .offset_from((ptr::addr_of!((*m).__u.__p) as *const *mut u8).add(4) as *const u8) as c_long;
+                __syscall2(SYS_set_robust_list as c_long,
+                     ptr::addr_of_mut!((*_self).robust_list) as c_long,
+                 (3* core::mem::size_of::<c_long>()) as c_long);
             }
         }
         if unsafe {(*m)._m_waiters()} != 0 {tid |= libc::INT_MIN;}
-        unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending), &mut (*m).__u.__p[4] as *mut _ as *mut c_void)};
+        unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending),
+             &mut (*m).__u.__p[4] as *mut _ as *mut c_void)};
     }
     tid |= old & 0x40000000;
 
     if a_cas(unsafe{ ptr::addr_of_mut!((*m).__u.__vi[1]) }, old, tid) != old {
         unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending), ptr::null_mut())};
-        if (lock_type & 12) == 12 && unsafe {(*m)._m_waiters() != 0} { return libc::ENOTRECOVERABLE; }
-        return libc::EBUSY;
+        if (lock_type & 12) == 12 && unsafe {(*m)._m_waiters() != 0} { return ENOTRECOVERABLE; }
+        return EBUSY;
     }
 
     success(m, old, lock_type, ptr::addr_of_mut!(_self));
@@ -80,12 +86,14 @@ fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pt
 {
     if (lock_type & 8) != 0 && unsafe { (*m)._m_waiters() } != 0 {
         let priv_flag = (lock_type & 128) ^ 128;
-        unsafe {__syscall2(libc::SYS_futex, ptr::addr_of!((*m).__u.__vi[1]) as c_long, (libc::FUTEX_UNLOCK_PI | priv_flag) as c_long);}
+        unsafe { __syscall2(SYS_futex as c_long,
+             ptr::addr_of!((*m).__u.__vi[1]) as c_long,
+             (libc::FUTEX_UNLOCK_PI | priv_flag) as c_long); }
         unsafe { ptr::write_volatile(ptr::addr_of_mut!((*(*_self)).robust_list.pending), ptr::null_mut()); }
         return if (lock_type & 4) != 0 {
-            libc::ENOTRECOVERABLE
+            ENOTRECOVERABLE
         } else {
-            libc::EBUSY
+            EBUSY
         };
     }
 
@@ -105,7 +113,7 @@ fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pt
 
     if old != 0 {
         unsafe { (*m).__u.__i[5] = 0 };
-        return libc::EOWNERDEAD;
+        return EOWNERDEAD;
     }
 
     0

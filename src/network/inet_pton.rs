@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
 use crate::thread::pthread_self::pthread_self;
 use super::*;
+use crate::arch::generic::bits::errno::*;
 
 fn isdigit(c: u8) -> bool
 {
@@ -54,7 +55,7 @@ pub extern "C" fn inet_pton(af: c_int, s: *const c_char, a0: *mut c_void) -> c_i
         }
         return 0;
     } else if af != AF_INET6 {
-        (*_self).errno_val = libc::EAFNOSUPPORT;
+        (*_self).errno_val = EAFNOSUPPORT;
         return -1;
     }
 

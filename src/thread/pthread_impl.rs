@@ -1,6 +1,8 @@
 use crate::include::ctype::*;
 use super::*;
 use crate::arch::syscall_arch::*;
+use crate::arch::generic::bits::errno::*;
+use crate::arch::syscall_bits::*;
 
 #[repr(C)]
 pub struct RobustList {
@@ -115,8 +117,9 @@ pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> ()
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
     let cnt = if cnt < 0 { libc::INT_MAX } else { cnt };
     unsafe {
-        let _ = __syscall3(libc::SYS_futex, addr as c_long, (libc::FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -libc::ENOSYS as c_long
-        || __syscall3(libc::SYS_futex, addr as c_long, libc::FUTEX_WAKE as c_long, cnt as c_long) != 0;
+        let _ = __syscall3(SYS_futex as c_long, addr as c_long, 
+            (libc::FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -ENOSYS as c_long
+        || __syscall3(SYS_futex as c_long, addr as c_long, libc::FUTEX_WAKE as c_long, cnt as c_long) != 0;
     };
     
 }

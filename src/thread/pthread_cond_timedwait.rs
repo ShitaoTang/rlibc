@@ -11,7 +11,8 @@ use super::pthread_mutex_lock::*;
 use super::pthread_mutex_unlock::*;
 use super::pthread_setcancelstate::*;
 use super::pthread_testcancel::*;
-
+use crate::arch::generic::bits::errno::*;
+use crate::arch::syscall_bits::*;
 
 #[repr(C)]
 pub struct waiter {
@@ -66,8 +67,10 @@ pub extern "C" fn unlock_requeue(l: *mut c_int, r: *mut c_int, w: c_int) -> ()
     } else {
         unsafe {
             let _ = 
-            __syscall5(libc::SYS_futex, l as c_long, (libc::FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long, 0 as c_long, 1 as c_long, r as c_long) != libc::ENOSYS as c_long
-            || __syscall5(libc::SYS_futex, l as c_long, libc::FUTEX_REQUEUE as c_long, 0 as c_long, 1 as c_long, r as c_long) != 0;
+            __syscall5(SYS_futex as c_long, l as c_long, (libc::FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long,
+             0 as c_long, 1 as c_long, r as c_long) != ENOSYS as c_long
+            || __syscall5(SYS_futex as c_long, l as c_long, libc::FUTEX_REQUEUE as c_long,
+             0 as c_long, 1 as c_long, r as c_long) != 0;
         };
     }
 }
@@ -94,12 +97,12 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
     let _self: pthread_t = pthread_self();
 
     if m.is_null() {
-        return libc::EINVAL;
+        return EINVAL;
     }
 
-    if unsafe{(*m)._m_type()} & 15 != 0 && unsafe{(*m)._m_lock()&libc::INT_MAX != (*_self).tid} {return libc::EPERM;}
+    if unsafe{(*m)._m_type()} & 15 != 0 && unsafe{(*m)._m_lock()&libc::INT_MAX != (*_self).tid} {return EPERM;}
 
-    if !ts.is_null() && (unsafe{(*ts).tv_nsec} as u64 >= 1000000000u64) {return libc::EINVAL;}
+    if !ts.is_null() && (unsafe{(*ts).tv_nsec} as u64 >= 1000000000u64) {return EINVAL;}
 
     pthread_testcancel();
 
@@ -136,16 +139,16 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
 
     loop {
         e = timedwait_cp(fut, seq, clock, ts, (shared==0) as c_int);
-        if !(unsafe{*(fut)}==seq && (e==0 || e==libc::EINTR)) {
+        if !(unsafe{*(fut)}==seq && (e==0 || e==EINTR)) {
             break;
         }
     }
-    if e == libc::EINTR {
+    if e == EINTR {
         e = 0;
     }
 
     if shared != 0 {
-        if e == libc::ECANCELED && unsafe{(*c)._c_seq() != seq} {e = 0;}
+        if e == ECANCELED && unsafe{(*c)._c_seq() != seq} {e = 0;}
         if a_fetch_add(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])}, -1) == -0x7fffffff {
             wake(unsafe{ptr::addr_of_mut!((*c).__u.__vi[3])}, 1, 0);
         }
@@ -207,7 +210,7 @@ fn relock(e: &mut c_int, m: *mut pthread_mutex_t , tmp: &mut c_int, oldstate: c_
         }
     }
 
-    if *e == libc::ECANCELED {*e = 0;}
+    if *e == ECANCELED {*e = 0;}
 
     done(*e, cs)
 }
@@ -216,7 +219,7 @@ fn done(e: c_int, cs: c_int) -> c_int
 {
     pthread_setcancelstate(cs, ptr::null_mut());
 
-    if e == libc::ECANCELED {
+    if e == ECANCELED {
         pthread_testcancel();
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, ptr::null_mut());
     }

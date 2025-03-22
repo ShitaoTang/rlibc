@@ -1,6 +1,8 @@
 use crate::internal::syscall::{SCM_TIMESTAMPNS_OLD, SCM_TIMESTAMP_OLD, socketcall_cp};
 use super::{cmsghdr, msghdr, socklen_t, CMSG_DATA, CMSG_SPACE, CMSG_LEN};
 use crate::include::ctype::*;
+use crate::arch::syscall_bits::*;
+
 
 // SCM: Socket Control Message
 fn __convert_scm_timestamps(msg: *mut msghdr, csize: socklen_t) -> ()
@@ -85,7 +87,7 @@ if c_long::MAX as u64 > c_int::MAX as u64 {
         msg = &mut h;
     }
 }
-    r = socketcall_cp(libc::SYS_recvmsg as c_int, fd as c_long, msg as c_long, flags as c_long, 0, 0, 0) as ssize_t;
+    r = socketcall_cp(SYS_recvmsg as c_int, fd as c_long, msg as c_long, flags as c_long, 0, 0, 0) as ssize_t;
     if r > 0 {
         __convert_scm_timestamps(msg, orig_controllen);
     }

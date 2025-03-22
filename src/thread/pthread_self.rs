@@ -1,4 +1,5 @@
 use crate::include::ctype::*;
+#[allow(unused_imports)]
 use super::pthread_impl::*;
 use crate::thread::pthread_arch::*;
 

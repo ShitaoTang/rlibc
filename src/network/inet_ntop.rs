@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
 use super::*;
 use crate::thread::pthread_self::pthread_self;
+use crate::arch::generic::bits::errno::*;
 
 // Network byte order -> Presentation format
 // binary IP addr (IPv4/IPv6) -> human-readable IP addr
@@ -76,10 +77,10 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
         }
     }
     _ => {
-        (*_self).errno_val = libc::EAFNOSUPPORT;
+        (*_self).errno_val = EAFNOSUPPORT;
         return 0 as *const c_char;
     }
     }}
-    unsafe {(*_self).errno_val = libc::ENOSPC};
+    unsafe {(*_self).errno_val = ENOSPC};
     0 as *const c_char
 }
