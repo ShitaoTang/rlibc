@@ -6,6 +6,8 @@ use super::pthread_setcancelstate::*;
 use super::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::internal::futex::*;
+use crate::include::time::*;
 
 unsafe extern "C" {
     #[link_name = "__eintr_valid_flag"]
@@ -13,7 +15,7 @@ unsafe extern "C" {
 }
 
 #[no_mangle]
-pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const libc::timespec) -> c_int
+pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const timespec) -> c_int
 {
     // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     let r: c_int = unsafe {
@@ -25,7 +27,7 @@ pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const
     unsafe {__syscall6(SYS_futex as c_long, addr as c_long, tmp as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int}
 }
 
-pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int
+pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: clockid_t, at: *const timespec, lock_priv: c_int) -> c_int
 {
     let mut cs: c_int = 0;
     let r: c_int;
@@ -40,11 +42,11 @@ pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: libc::clockid_t, 
 }
 
 #[no_mangle]
-pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_t, at: *const libc::timespec, lock_priv: c_int) -> c_int
+pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: clockid_t, at: *const timespec, lock_priv: c_int) -> c_int
 {
     let mut r: c_int;
-    let mut to: libc::timespec = libc::timespec {tv_sec: 0, tv_nsec: 0};
-    let mut top: *mut libc::timespec = ptr::null_mut();
+    let mut to: timespec = timespec {tv_sec: 0, tv_nsec: 0};
+    let mut top: *mut timespec = ptr::null_mut();
 
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { 0 };
 
@@ -62,7 +64,7 @@ pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: libc::clockid_
     }
 
     // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
-    r = -futex4_cp(addr as *mut c_void, libc::FUTEX_WAIT|lock_priv, val, top);
+    r = -futex4_cp(addr as *mut c_void, FUTEX_WAIT|lock_priv, val, top);
 
     if r != EINTR && r!= ETIMEDOUT && r != ECANCELED {r = 0;}
     if r == EINTR && unsafe {ptr::read_volatile(ptr::addr_of!(__eintr_valid_flag))} == 0 {r = 0;}

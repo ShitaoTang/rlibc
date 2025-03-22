@@ -8,6 +8,7 @@ use super::pthread_impl::*;
 use super::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::internal::futex::*;
 
 #[no_mangle]
 pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
@@ -20,11 +21,11 @@ pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
     let mut new: c_int = 0;
     let mut old: c_int = 0;
 
-    if lock_type != libc::PTHREAD_MUTEX_NORMAL {
+    if lock_type != PTHREAD_MUTEX_NORMAL {
         old = unsafe {(*m)._m_lock()};
         let own = old & 0x3fffffff;
         if own != unsafe {(*_self).tid} { return EPERM; }
-        if lock_type&3 == libc::PTHREAD_MUTEX_RECURSIVE && unsafe {(*m)._m_count()} != 0 {
+        if lock_type&3 == PTHREAD_MUTEX_RECURSIVE && unsafe {(*m)._m_count()} != 0 {
             unsafe {(*m).__u.__i[5] -= 1;}
             return 0;
         }
@@ -58,7 +59,7 @@ pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
             if new != 0 {a_store(unsafe{ptr::addr_of_mut!((*m).__u.__vi[2])}, -1);}
             unsafe {__syscall2(SYS_futex as c_long,
                  ptr::addr_of_mut!((*m).__u.__vi[1]) as c_long,
-                 (libc::FUTEX_UNLOCK_PI | lock_priv) as c_long);}
+                 (FUTEX_UNLOCK_PI | lock_priv) as c_long);}
         }
         cont = 0;
         waiters = 0;

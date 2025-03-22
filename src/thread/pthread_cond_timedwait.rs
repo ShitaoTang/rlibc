@@ -13,6 +13,8 @@ use super::pthread_setcancelstate::*;
 use super::pthread_testcancel::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::internal::futex::*;
+use crate::include::time::*;
 
 #[repr(C)]
 pub struct waiter {
@@ -67,9 +69,9 @@ pub extern "C" fn unlock_requeue(l: *mut c_int, r: *mut c_int, w: c_int) -> ()
     } else {
         unsafe {
             let _ = 
-            __syscall5(SYS_futex as c_long, l as c_long, (libc::FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long,
+            __syscall5(SYS_futex as c_long, l as c_long, (FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long,
              0 as c_long, 1 as c_long, r as c_long) != ENOSYS as c_long
-            || __syscall5(SYS_futex as c_long, l as c_long, libc::FUTEX_REQUEUE as c_long,
+            || __syscall5(SYS_futex as c_long, l as c_long, FUTEX_REQUEUE as c_long,
              0 as c_long, 1 as c_long, r as c_long) != 0;
         };
     }
@@ -83,7 +85,7 @@ pub enum THREAD_STATE {
 }
 
 #[no_mangle]
-pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t, ts: *const libc::timespec) -> c_int
+pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread_mutex_t, ts: *const timespec) -> c_int
 {
     let mut node: waiter = waiter::new();
     let mut e: c_int;
@@ -100,7 +102,7 @@ pub extern "C" fn pthread_cond_timedwait(c: *mut pthread_cond_t, m: *mut pthread
         return EINVAL;
     }
 
-    if unsafe{(*m)._m_type()} & 15 != 0 && unsafe{(*m)._m_lock()&libc::INT_MAX != (*_self).tid} {return EPERM;}
+    if unsafe{(*m)._m_type()} & 15 != 0 && unsafe{(*m)._m_lock()&c_int::MAX != (*_self).tid} {return EPERM;}
 
     if !ts.is_null() && (unsafe{(*ts).tv_nsec} as u64 >= 1000000000u64) {return EINVAL;}
 
@@ -202,7 +204,7 @@ fn relock(e: &mut c_int, m: *mut pthread_mutex_t , tmp: &mut c_int, oldstate: c_
         if (*node).prev != ptr::null_mut() {
             let val = (*m)._m_lock();
             if val > 0 {
-                a_cas(ptr::addr_of_mut!((*m).__u.__vi[1]), val, val | libc::INT_MIN);
+                a_cas(ptr::addr_of_mut!((*m).__u.__vi[1]), val, val | c_int::MIN);
             }
             unlock_requeue(ptr::addr_of_mut!((*(*node).prev).barrier), ptr::addr_of_mut!((*m).__u.__vi[1]), (*m)._m_type()&(8|128));
         } else if ((*m)._m_type() & 8) == 0 {

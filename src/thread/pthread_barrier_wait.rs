@@ -7,6 +7,8 @@ use super::pthread_impl::*;
 use super::vmlock::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::internal::futex::*;
+use super::*;
 
 #[repr(C)]
 struct instance {       // all members are volatile
@@ -29,13 +31,13 @@ impl instance {
 
 #[no_mangle]
 pub extern "C" fn pshared_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
-    let limit: c_int = (unsafe{(*b)._b_limit()} & libc::INT_MAX) + 1;
+    let limit: c_int = (unsafe{(*b)._b_limit()} & c_int::MAX) + 1;
     let mut ret: c_int = 0;
     let mut v: c_int;
     let mut w: c_int;
 
     if limit == 1 {
-        return libc::PTHREAD_BARRIER_SERIAL_THREAD;
+        return PTHREAD_BARRIER_SERIAL_THREAD;
     }
 
     v = a_cas(unsafe{ptr::addr_of_mut!((*b).__u.__vi[0])}, 0, limit);
@@ -51,7 +53,7 @@ pub extern "C" fn pshared_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
     
         if (*b)._b_count() == limit {
             a_store(ptr::addr_of_mut!((*b).__u.__vi[3]), 0);
-            ret = libc::PTHREAD_BARRIER_SERIAL_THREAD;
+            ret = PTHREAD_BARRIER_SERIAL_THREAD;
             if (*b)._b_waiters2() != 0 {
                 wake(ptr::addr_of_mut!((*b).__u.__vi[3]), -1, 0);
             }
@@ -85,10 +87,10 @@ pub extern "C" fn pshared_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
         loop {
             v = (*b)._b_lock();
             w = (*b)._b_waiters();
-            if a_cas(ptr::addr_of_mut!((*b).__u.__vi[0]), v, if v==libc::INT_MIN+1 {0} else {v-1}) == v {break;}
+            if a_cas(ptr::addr_of_mut!((*b).__u.__vi[0]), v, if v==c_int::MIN+1 {0} else {v-1}) == v {break;}
         }
 
-        if v==libc::INT_MIN+1 || (v==1 && w!=0) {
+        if v==c_int::MIN+1 || (v==1 && w!=0) {
             wake(ptr::addr_of_mut!((*b).__u.__vi[0]), 1, 0);
         }
 
@@ -103,7 +105,7 @@ pub extern "C" fn pthread_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
     let limit = unsafe{(*b)._b_limit()};
     let mut inst: *mut instance;
 
-    if limit == 0 {return libc::PTHREAD_BARRIER_SERIAL_THREAD;}
+    if limit == 0 {return PTHREAD_BARRIER_SERIAL_THREAD;}
 
     if limit < 0 {return pshared_barrier_wait(b);}
 
@@ -129,11 +131,11 @@ pub extern "C" fn pthread_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
             a_inc(ptr::addr_of_mut!((*inst).finished));
             while ptr::read_volatile(&(*inst).finished) == 1 {
                 let _ = __syscall4(SYS_futex as c_long, ptr::addr_of_mut!((*inst).finished) as c_long, 
-                            (libc::FUTEX_WAIT | FUTEX_PRIVATE) as c_long, 1 as c_long, 0 as c_long) != -ENOSYS as c_long
+                            (FUTEX_WAIT | FUTEX_PRIVATE) as c_long, 1 as c_long, 0 as c_long) != -ENOSYS as c_long
                      || __syscall4(SYS_futex as c_long, ptr::addr_of_mut!((*inst).finished) as c_long, 
-                            libc::FUTEX_WAIT as c_long, 1 as c_long, 0 as c_long) != 0;
+                            FUTEX_WAIT as c_long, 1 as c_long, 0 as c_long) != 0;
             }
-            return libc::PTHREAD_BARRIER_SERIAL_THREAD;
+            return PTHREAD_BARRIER_SERIAL_THREAD;
         }
 
         assert_ne!(inst, ptr::null_mut());

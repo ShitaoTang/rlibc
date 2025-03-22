@@ -113,3 +113,5 @@ pub const PTHREAD_CANCELED: *mut c_void = usize::MAX as *mut c_void;
 
 pub const PTHREAD_CANCEL_DEFERRED: c_int = 0;
 pub const PTHREAD_CANCEL_ASYNCHRONOUS: c_int = 1;
+
+pub const PTHREAD_BARRIER_SERIAL_THREAD: c_int = -1;

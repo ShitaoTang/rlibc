@@ -3,9 +3,10 @@ use super::mmsghdr;
 use crate::internal::syscall_ret::*;
 use crate::thread::pthread_cancel::__syscall_cp_c;
 use crate::arch::syscall_bits::*;
+use crate::include::time::*;
 
 #[no_mangle]
-pub extern "C" fn recvmmsg(fd: c_int, msgvec: *mut mmsghdr, vlen: c_uint, flags: c_uint, timeout: *mut libc::timespec) -> c_int
+pub extern "C" fn recvmmsg(fd: c_int, msgvec: *mut mmsghdr, vlen: c_uint, flags: c_uint, timeout: *mut timespec) -> c_int
 {
 if c_long::MAX as u64 > c_int::MAX as u64 {
     let mut mh: *mut mmsghdr = msgvec;

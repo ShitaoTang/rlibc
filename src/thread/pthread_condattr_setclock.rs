@@ -6,7 +6,7 @@ pub extern "C" fn pthread_condattr_setclock(a: *mut pthread_condattr_t, clk: clo
 {
     if (clk < 0) || (clk as u32).wrapping_sub(2) < 2 {return EINVAL;}
     unsafe {
-        (*a).__attr &= libc::INT_MIN as u32;
+        (*a).__attr &= c_int::MIN as u32;
         (*a).__attr |= clk as u32;
     }
     0

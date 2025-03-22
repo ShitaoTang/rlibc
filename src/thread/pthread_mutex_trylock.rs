@@ -5,6 +5,8 @@ use super::pthread_self::*;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use super::*;
+use crate::internal::futex::*;
 
 #[no_mangle]
 pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int
@@ -13,7 +15,7 @@ pub extern "C" fn pthread_mutex_trylock(m: *mut pthread_mutex_t) -> c_int
         return -1;
     }
 
-    if (unsafe{(*m)._m_type()} & 15) == libc::PTHREAD_MUTEX_NORMAL{
+    if (unsafe{(*m)._m_type()} & 15) == PTHREAD_MUTEX_NORMAL{
         return a_cas(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, 0, EBUSY) & EBUSY;
     }
 
@@ -42,7 +44,7 @@ pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int
             return success(m, old, lock_type, ptr::addr_of_mut!(_self));
         }
 
-        if (lock_type & 3) == libc::PTHREAD_MUTEX_RECURSIVE {
+        if (lock_type & 3) == PTHREAD_MUTEX_RECURSIVE {
             if unsafe{(*m)._m_count() as c_uint >= 0x7fffffff as c_uint} {
                 return EAGAIN;
             }
@@ -65,7 +67,7 @@ pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int
                  (3* core::mem::size_of::<c_long>()) as c_long);
             }
         }
-        if unsafe {(*m)._m_waiters()} != 0 {tid |= libc::INT_MIN;}
+        if unsafe {(*m)._m_waiters()} != 0 {tid |= c_int::MIN;}
         unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending),
              &mut (*m).__u.__p[4] as *mut _ as *mut c_void)};
     }
@@ -88,7 +90,7 @@ fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pt
         let priv_flag = (lock_type & 128) ^ 128;
         unsafe { __syscall2(SYS_futex as c_long,
              ptr::addr_of!((*m).__u.__vi[1]) as c_long,
-             (libc::FUTEX_UNLOCK_PI | priv_flag) as c_long); }
+             (FUTEX_UNLOCK_PI | priv_flag) as c_long); }
         unsafe { ptr::write_volatile(ptr::addr_of_mut!((*(*_self)).robust_list.pending), ptr::null_mut()); }
         return if (lock_type & 4) != 0 {
             ENOTRECOVERABLE

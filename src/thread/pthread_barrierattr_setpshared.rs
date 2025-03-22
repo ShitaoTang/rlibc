@@ -6,7 +6,7 @@ pub extern "C" fn pthread_barrierattr_setpshared(a: *mut pthread_barrierattr_t, 
 {
     if pshared as u32 > 1u32 {return EINVAL;}
     unsafe {
-        (*a).__attr = if pshared!=0 {libc::INT_MIN as c_uint} else {0};
+        (*a).__attr = if pshared!=0 {c_int::MIN as c_uint} else {0};
     }
     0
 }

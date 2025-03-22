@@ -1,5 +1,6 @@
 use core::ptr;
 use crate::thread::pthread_impl::pthread;
+use crate::cfg_if;
 
 pub type c_schar = i8;
 pub type c_uchar = u8;
@@ -197,8 +198,6 @@ pub const SIGPT_SET_VALUE: [c_ulong; _NSIG/8/8] = [3u64 << 32];
 pub static SIGPT_SET_VALUE: [c_ulong; _NSIG/8/4] = [0, 3u64];
 pub const SIGPT_SET: *const sigset_t = SIGPT_SET_VALUE.as_ptr() as *const sigset_t;
 
-pub const FUTEX_PRIVATE: c_int = 128;
-
 #[repr(C)]
 pub struct pthread_mutex_t {
     pub __u: ptmu,
@@ -345,3 +344,13 @@ pub struct __locale_struct {
 pub type locale_t = *mut __locale_struct;
 
 pub type clockid_t = c_int;
+pub type __time_t = c_long;
+pub type time_t = __time_t;
+pub type __suseconds_t = c_long;
+pub type suseconds_t = __suseconds_t;
+
+pub type off_t = c_long;
+
+pub type pid_t = c_int;
+
+pub type mode_t = c_uint;
