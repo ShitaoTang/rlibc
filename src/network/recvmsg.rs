@@ -3,6 +3,7 @@ use super::{cmsghdr, msghdr, socklen_t, CMSG_DATA, CMSG_SPACE, CMSG_LEN};
 use crate::include::ctype::*;
 use crate::arch::syscall_bits::*;
 use super::*;
+use crate::string::memcpy::*;
 
 // SCM: Socket Control Message
 fn __convert_scm_timestamps(msg: *mut msghdr, csize: socklen_t) -> ()
@@ -57,7 +58,7 @@ fn __convert_scm_timestamps(msg: *mut msghdr, csize: socklen_t) -> ()
         (*cmsg).cmsg_level = SOL_SOCKET;
         (*cmsg).cmsg_type = c_type;
         (*cmsg).cmsg_len = CMSG_LEN(size_of::<c_longlong>() * 2) as u32;
-        libc::memcpy(CMSG_DATA(cmsg) as *mut c_void,
+        memcpy(CMSG_DATA(cmsg) as *mut c_void,
          tvts.as_ptr() as *const c_void, size_of::<c_longlong>() as usize * 2);
     }
 }

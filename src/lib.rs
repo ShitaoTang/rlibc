@@ -12,6 +12,7 @@ pub mod arch;
 pub mod internal;
 pub mod network;
 pub mod time;
+pub mod string;
 
 #[cfg(not(test))]
 #[panic_handler]

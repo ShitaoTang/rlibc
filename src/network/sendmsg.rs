@@ -6,6 +6,7 @@ use super::{cmsghdr, msghdr, CMSG_SPACE};
 use core::mem::size_of;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::string::memcpy::*;
 
 #[no_mangle]
 pub extern "C" fn sendmsg(fd: c_int, msg: *const msghdr, flags: c_int) -> ssize_t
@@ -30,7 +31,7 @@ if c_long::MAX as u64 > c_int::MAX as u64 {
                 return -1;
             }
             unsafe {
-                libc::memcpy(chbuf.as_mut_ptr() as *mut c_void, h.msg_control, h.msg_controllen);
+                memcpy(chbuf.as_mut_ptr() as *mut c_void, h.msg_control, h.msg_controllen);
             }
             h.msg_control = chbuf.as_mut_ptr() as *mut c_void;
             c = CMSG_FIRSTHDR(&h);

@@ -1,6 +1,6 @@
 use crate::include::ctype::*;
 use super::*;
-use crate::thread::pthread_self::pthread_self;
+use crate::thread::pthread_self::*;
 use crate::arch::generic::bits::errno::*;
 
 // Network byte order -> Presentation format
