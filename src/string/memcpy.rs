@@ -52,7 +52,6 @@ pub unsafe extern "C" fn memcpy(dest: *mut c_void, src: *const c_void, n: usize)
         if n&1 != 0 {
             *d = *s;
         }
-        // *d = 0; // end with '\0'
         return dest;
     }
 
@@ -179,7 +178,6 @@ pub unsafe extern "C" fn memcpy(dest: *mut c_void, src: *const c_void, n: usize)
     if n&1 != 0 {
         *d = *s;
     }
-    // *d = 0; // end with '\0'
     dest
 }
 

@@ -31,9 +31,10 @@ pub unsafe extern "C" fn stpcpy(dest: *mut c_char, src: *const c_char) -> *mut c
         d = wd as *mut c_uchar;
         s = ws as *const c_uchar;
     }
+    *d = *s;
     while *s != 0 {
-        *d = *s; d = d.add(1); s = s.add(1);
+        d = d.add(1); s = s.add(1); *d = *s;
     }
-    *d = 0; // end with '\0'
+    // *d = 0; // end with '\0'
     d as *mut c_char
 }
