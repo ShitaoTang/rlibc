@@ -4,3 +4,5 @@ pub mod memmove;
 
 pub mod stpcpy;
 pub mod strcpy;
+pub mod strlen;
+pub mod strspn;

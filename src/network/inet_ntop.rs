@@ -2,6 +2,11 @@ use crate::include::ctype::*;
 use super::*;
 use crate::thread::pthread_self::*;
 use crate::arch::generic::bits::errno::*;
+use crate::string::memcmp::memcmp;
+use crate::string::memmove::memmove;
+use crate::string::strcpy::strcpy;
+use crate::string::strlen::strlen;
+use crate::string::strspn::strspn;
 
 // Network byte order -> Presentation format
 // binary IP addr (IPv4/IPv6) -> human-readable IP addr
@@ -29,7 +34,7 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
         }
     }
     AF_INET6 => {
-        if libc::memcmp(a0, b"\0\0\0\0\0\0\0\0\0\0\xff\xff".as_ptr() as *const c_void, 12) != 0 {
+        if memcmp(a0, b"\0\0\0\0\0\0\0\0\0\0\xff\xff".as_ptr() as *const c_void, 12) != 0 {
             libc::snprintf(buf.as_mut_ptr() as *mut c_char, buf.len() as usize, 
                            b"%x:%x:%x:%x:%x:%x:%x:%x\0".as_ptr() as *const c_char,
                            (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as c_int,
@@ -58,7 +63,7 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
             if i!=0 && buf[i]!=b':' as c_char { i += 1; continue; }
             // the accept string should end with '\0', otherwise it will lead to UB --- reading uninitialized memory
             // for zero compressed IPv6 address
-            j = libc::strspn(buf.as_ptr().add(i), b":0\0".as_ptr() as *const c_char) as c_int; 
+            j = strspn(buf.as_ptr().add(i), b":0\0".as_ptr() as *const c_char) as c_int; 
             if j > max as c_int {
                 best = i;
                 max = j as usize;
@@ -68,11 +73,11 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
         if max > 3 {
             buf[best as usize] = b':'.try_into().unwrap();
             buf[(best+1) as usize] = b':'.try_into().unwrap();
-            libc::memmove(buf.as_mut_ptr().add(best+2) as *mut c_void, 
+            memmove(buf.as_mut_ptr().add(best+2) as *mut c_void, 
                      buf.as_ptr().add(best+max) as *const c_void, (i-best-max+1) as usize);
         }
-        if libc::strlen(buf.as_ptr()) < l.try_into().unwrap() {
-            libc::strcpy(s, buf.as_ptr());
+        if strlen(buf.as_ptr()) < l.try_into().unwrap() {
+            strcpy(s, buf.as_ptr());
             return s;
         }
     }

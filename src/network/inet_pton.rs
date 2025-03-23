@@ -2,6 +2,7 @@ use crate::include::ctype::*;
 use crate::thread::pthread_self::pthread_self;
 use super::*;
 use crate::arch::generic::bits::errno::*;
+use crate::string::memmove::memmove;
 
 fn isdigit(c: u8) -> bool
 {
@@ -94,7 +95,7 @@ pub extern "C" fn inet_pton(af: c_int, s: *const c_char, a0: *mut c_void) -> c_i
         i += 1;
     }
     if brk >= 0 {
-        libc::memmove(ip.as_mut_ptr().offset(brk as isize + 7 - i as isize) as *mut c_void,
+        memmove(ip.as_mut_ptr().offset(brk as isize + 7 - i as isize) as *mut c_void,
                       ip.as_ptr().offset(brk as isize) as *const c_void,
                       (i - brk + 1) as usize * 2
         );
