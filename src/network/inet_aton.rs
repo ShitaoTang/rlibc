@@ -1,5 +1,6 @@
 use crate::include::ctype::*;
 use super::in_addr;
+use crate::stdlib::strtol::strtoul;
 
 // ASCII string -> Network byte order
 // only for IPv4
@@ -16,7 +17,7 @@ pub extern "C" fn inet_aton(s0: *const c_char, dest: *mut in_addr) -> c_int
     let mut i: c_int = 0;
 
     while i < 4 {
-        a[i as usize] = unsafe { libc::strtoul(s, &mut z, 0) };
+        a[i as usize] = strtoul(s, &mut z, 0);
         if z as *const c_uchar == s as *const c_uchar
          || unsafe{(*z)!=0 && (*z)!=b'.'.try_into().unwrap()}
          || unsafe{(*s as u8) as u32 - '0' as u32 >= 10} { 
