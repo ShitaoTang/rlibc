@@ -13,6 +13,8 @@ pub mod internal;
 pub mod network;
 pub mod time;
 pub mod string;
+pub mod stdio;
+pub mod stdlib;
 
 #[cfg(not(test))]
 #[panic_handler]

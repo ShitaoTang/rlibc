@@ -1,5 +1,6 @@
 use core::ptr;
 use crate::thread::pthread_impl::pthread;
+use crate::internal::stdio_impl::*;
 use crate::cfg_if;
 
 pub type c_schar = i8;
@@ -17,6 +18,9 @@ pub type size_t = usize;
 pub type ssize_t = isize;
 pub type intptr_t = isize;
 pub type uintptr_t = usize;
+
+pub type intmax_t = i64;
+pub type uintmax_t = u64;
 
 pub type c_void = core::ffi::c_void;
 
@@ -354,3 +358,5 @@ pub type off_t = c_long;
 pub type pid_t = c_int;
 
 pub type mode_t = c_uint;
+
+pub type FILE = _IO_FILE;
