@@ -9,7 +9,7 @@ pub struct SliceWriter<'a, T> {
 
 impl<'a, T> SliceWriter<'a, T>
 where
-    T: Copy + Into<u8>,
+    T: Copy + Into<c_char>,
 {
     pub fn new(buffer: &'a mut [T]) -> Self {
         Self { buffer, pos: 0 }
@@ -26,7 +26,7 @@ where
 
 impl<'a, T> fmt::Write for SliceWriter<'a, T>
 where
-    T: Copy + Into<u8>,
+    T: Copy + Into<c_char>,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let bytes = s.as_bytes();

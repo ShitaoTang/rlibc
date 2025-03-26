@@ -28,7 +28,7 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
     unsafe {
     match af {
     AF_INET => {
-        let mut temp = [0u8; 16];
+        let mut temp = [0 as c_char; 16];
         let mut writer = SliceWriter::new(&mut temp);
         write!(
             &mut writer,
@@ -47,7 +47,7 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
     }
     AF_INET6 => {
         if memcmp(a0, b"\0\0\0\0\0\0\0\0\0\0\xff\xff".as_ptr() as *const c_void, 12) != 0 {
-            let mut temp = [0u8; 40];
+            let mut temp = [0 as c_char; 40];
             let mut writer = SliceWriter::new(&mut temp);
             write!(
             &mut writer,
@@ -77,7 +77,7 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
         } else {
             // IPv4-mapped IPv6 address
             // 4B*6 + 3B*4 + 10B = 46B
-            let mut temp = [0u8; 48];   // for alignment
+            let mut temp = [0 as c_char; 48];   // for alignment
             let mut writer = SliceWriter::new(&mut temp);
             write!(
                 &mut writer,
