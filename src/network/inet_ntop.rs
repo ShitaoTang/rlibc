@@ -7,6 +7,8 @@ use crate::string::memmove::memmove;
 use crate::string::strcpy::strcpy;
 use crate::string::strlen::strlen;
 use crate::string::strspn::strspn;
+use core::fmt::Write;
+use crate::stdio::slice_write::SliceWriter;
 
 // Network byte order -> Presentation format
 // binary IP addr (IPv4/IPv6) -> human-readable IP addr
@@ -26,38 +28,84 @@ pub extern "C" fn inet_ntop(af: c_int, a0: *const c_void, s: *mut c_char, l: soc
     unsafe {
     match af {
     AF_INET => {
-        if libc::snprintf(s, l as usize, b"%d.%d.%d.%d\0".as_ptr() as *const c_char,
-                            *a as c_uint, *(a.offset(1)) as c_uint, 
-                            *(a.offset(2)) as c_uint, *(a.offset(3)) as c_uint
-            ) < l.try_into().unwrap() {
+        let mut temp = [0u8; 16];
+        let mut writer = SliceWriter::new(&mut temp);
+        write!(
+            &mut writer,
+            "{}.{}.{}.{}",
+            *a as u32,
+            *a.offset(1) as u32,
+            *a.offset(2) as u32,
+            *a.offset(3) as u32
+        ).unwrap();
+        
+        if writer.pos < l as usize {
+            temp[writer.pos] = 0;
+            strcpy(s, temp.as_ptr());
             return s;
         }
     }
     AF_INET6 => {
         if memcmp(a0, b"\0\0\0\0\0\0\0\0\0\0\xff\xff".as_ptr() as *const c_void, 12) != 0 {
-            libc::snprintf(buf.as_mut_ptr() as *mut c_char, buf.len() as usize, 
-                           b"%x:%x:%x:%x:%x:%x:%x:%x\0".as_ptr() as *const c_char,
-                           (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as c_int,
-                           (((*a.offset(2) as u16) << 8) + *a.offset(3) as u16) as c_int,
-                           (((*a.offset(4) as u16) << 8) + *a.offset(5) as u16) as c_int,
-                           (((*a.offset(6) as u16) << 8) + *a.offset(7) as u16) as c_int,
-                           (((*a.offset(8) as u16) << 8) + *a.offset(9) as u16) as c_int,
-                           (((*a.offset(10) as u16) << 8) + *a.offset(11) as u16) as c_int,
-                           (((*a.offset(12) as u16) << 8) + *a.offset(13) as u16) as c_int,
-                           (((*a.offset(14) as u16) << 8) + *a.offset(15) as u16) as c_int
-            );
+            let mut temp = [0u8; 40];
+            let mut writer = SliceWriter::new(&mut temp);
+            write!(
+            &mut writer,
+                "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
+                (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as c_int,
+                (((*a.offset(2) as u16) << 8) + *a.offset(3) as u16) as c_int,
+                (((*a.offset(4) as u16) << 8) + *a.offset(5) as u16) as c_int,
+                (((*a.offset(6) as u16) << 8) + *a.offset(7) as u16) as c_int,
+                (((*a.offset(8) as u16) << 8) + *a.offset(9) as u16) as c_int,
+                (((*a.offset(10) as u16) << 8) + *a.offset(11) as u16) as c_int,
+                (((*a.offset(12) as u16) << 8) + *a.offset(13) as u16) as c_int,
+                (((*a.offset(14) as u16) << 8) + *a.offset(15) as u16) as c_int
+            ).unwrap();
+            temp[writer.pos] = 0;
+            strcpy(buf.as_mut_ptr(), temp.as_ptr());
+            // libc::snprintf(buf.as_mut_ptr() as *mut c_char, buf.len() as usize, 
+            //                b"%x:%x:%x:%x:%x:%x:%x:%x\0".as_ptr() as *const c_char,
+            //                (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as c_int,
+            //                (((*a.offset(2) as u16) << 8) + *a.offset(3) as u16) as c_int,
+            //                (((*a.offset(4) as u16) << 8) + *a.offset(5) as u16) as c_int,
+            //                (((*a.offset(6) as u16) << 8) + *a.offset(7) as u16) as c_int,
+            //                (((*a.offset(8) as u16) << 8) + *a.offset(9) as u16) as c_int,
+            //                (((*a.offset(10) as u16) << 8) + *a.offset(11) as u16) as c_int,
+            //                (((*a.offset(12) as u16) << 8) + *a.offset(13) as u16) as c_int,
+            //                (((*a.offset(14) as u16) << 8) + *a.offset(15) as u16) as c_int
+            // );
         } else {
-            libc::snprintf(buf.as_mut_ptr() as *mut c_char, buf.len() as usize, 
-                           b"%x:%x:%x:%x:%x:%x:%d.%d.%d.%d\0".as_ptr() as *const c_char,
-                           (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as c_int,
-                           (((*a.offset(2) as u16) << 8) + *a.offset(3) as u16) as c_int,
-                           (((*a.offset(4) as u16) << 8) + *a.offset(5) as u16) as c_int,
-                           (((*a.offset(6) as u16) << 8) + *a.offset(7) as u16) as c_int,
-                           (((*a.offset(8) as u16) << 8) + *a.offset(9) as u16) as c_int,
-                           (((*a.offset(10) as u16) << 8) + *a.offset(11) as u16) as c_int,
-                            *a.offset(12) as c_int, *a.offset(13) as c_int,
-                            *a.offset(14) as c_int, *a.offset(15) as c_int
-            );
+            // IPv4-mapped IPv6 address
+            // 4B*6 + 3B*4 + 10B = 46B
+            let mut temp = [0u8; 48];   // for alignment
+            let mut writer = SliceWriter::new(&mut temp);
+            write!(
+                &mut writer,
+                "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{}.{}.{}.{}",
+                (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as u32,
+                (((*a.offset(2) as u16) << 8) + *a.offset(3) as u16) as u32,
+                (((*a.offset(4) as u16) << 8) + *a.offset(5) as u16) as u32,
+                (((*a.offset(6) as u16) << 8) + *a.offset(7) as u16) as u32,
+                (((*a.offset(8) as u16) << 8) + *a.offset(9) as u16) as u32,
+                (((*a.offset(10) as u16) << 8) + *a.offset(11) as u16) as u32,
+                *a.offset(12) as u32,
+                *a.offset(13) as u32,
+                *a.offset(14) as u32,
+                *a.offset(15) as u32
+            ).unwrap();
+            temp[writer.pos] = 0;
+            strcpy(buf.as_mut_ptr(), temp.as_ptr());
+            // libc::snprintf(buf.as_mut_ptr() as *mut c_char, buf.len() as usize, 
+            //                b"%x:%x:%x:%x:%x:%x:%d.%d.%d.%d\0".as_ptr() as *const c_char,
+            //                (((*a.offset(0) as u16) << 8) + *a.offset(1) as u16) as c_int,
+            //                (((*a.offset(2) as u16) << 8) + *a.offset(3) as u16) as c_int,
+            //                (((*a.offset(4) as u16) << 8) + *a.offset(5) as u16) as c_int,
+            //                (((*a.offset(6) as u16) << 8) + *a.offset(7) as u16) as c_int,
+            //                (((*a.offset(8) as u16) << 8) + *a.offset(9) as u16) as c_int,
+            //                (((*a.offset(10) as u16) << 8) + *a.offset(11) as u16) as c_int,
+            //                 *a.offset(12) as c_int, *a.offset(13) as c_int,
+            //                 *a.offset(14) as c_int, *a.offset(15) as c_int
+            // );
         }
         while buf[i] != 0 {
             if i!=0 && buf[i]!=b':' as c_char { i += 1; continue; }

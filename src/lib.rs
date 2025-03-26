@@ -2,6 +2,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
+#![feature(c_variadic)]
 
 #[allow(unused_imports)]
 use core::panic::PanicInfo;
