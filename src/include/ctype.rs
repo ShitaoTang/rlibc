@@ -360,3 +360,7 @@ pub type pid_t = c_int;
 pub type mode_t = c_uint;
 
 pub type FILE = _IO_FILE;
+
+pub type dev_t = c_ulong;
+
+pub type ino_t = c_ulong;
