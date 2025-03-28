@@ -8,11 +8,7 @@ use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
 use crate::internal::futex::*;
 use crate::include::time::*;
-
-unsafe extern "C" {
-    #[link_name = "__eintr_valid_flag"]
-    unsafe static mut __eintr_valid_flag: i32;
-}
+use crate::signal::sigaction;
 
 #[no_mangle]
 pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const timespec) -> c_int
@@ -67,7 +63,7 @@ pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: clockid_t, at:
     r = -futex4_cp(addr as *mut c_void, FUTEX_WAIT|lock_priv, val, top);
 
     if r != EINTR && r!= ETIMEDOUT && r != ECANCELED {r = 0;}
-    if r == EINTR && unsafe {ptr::read_volatile(ptr::addr_of!(__eintr_valid_flag))} == 0 {r = 0;}
+    if r == EINTR && unsafe {ptr::read_volatile(ptr::addr_of!(sigaction::__eintr_valid_flag))} == 0 {r = 0;}
 
     r
 }
