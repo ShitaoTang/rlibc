@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 libc = "0.2"
 
+[build-dependencies]
+cbindgen = "0.26"
+
 [lib]
 name = "rlibc"
 crate-type = ["staticlib"]
