@@ -7,6 +7,11 @@
 #[allow(unused_imports)]
 use core::panic::PanicInfo;
 
+pub mod crt;
+pub mod env;
+pub mod exit;
+pub mod ldso;
+
 pub mod include;
 pub mod thread;
 pub mod arch;
@@ -16,6 +21,7 @@ pub mod time;
 pub mod string;
 pub mod stdio;
 pub mod stdlib;
+pub mod signal;
 
 #[cfg(not(test))]
 #[panic_handler]

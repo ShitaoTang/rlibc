@@ -8,12 +8,12 @@ pub type Phdr = Elf64_Phdr;
 #[cfg(target_pointer_width = "64")] 
 pub type Sym = Elf64_Sym;
 #[cfg(target_pointer_width = "64")]
-pub fn R_TYPE(x:c_uint) -> c_uint {
-    x & 0x7fffffff
+pub fn R_TYPE(x:size_t) -> c_int {
+    (x & 0x7fffffff) as c_int
 }
 #[cfg(target_pointer_width = "64")]
-pub fn R_SYM(x:c_uint) -> c_uint {
-    x >> 32
+pub fn R_SYM(x: size_t) -> c_int {
+    (x >> 32) as c_int
 }
 
 #[cfg(target_pointer_width = "32")]
@@ -65,5 +65,6 @@ pub struct fdpic_loadmap {
     pub segs: [fdpic_loadseg; 0],
 }
 
-pub const AUX_CNT: size_t = 32;
+#[allow(dead_code)]
+const AUX_CNT: size_t = 32;
 pub const DYN_CNT: size_t = 37;

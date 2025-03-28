@@ -111,6 +111,15 @@ impl pthread {
     }
 }
 
+pub enum DT_STATUS {
+    DT_EXITED = 0,
+    DT_EXITING,
+    DT_JOINABLE,
+    DT_DETACHED,
+}
+
+pub const DTP_OFFSET: size_t = 0;
+
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> ()
@@ -124,3 +133,22 @@ pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> ()
     };
     
 }
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+#[inline(always)]
+pub extern "C" fn TP_ADJ(p: *mut c_void) -> *mut c_void
+{
+    p
+}
+
+#[cfg(target_arch = "aarch64")]
+#[no_mangle]
+#[inline(always)]
+pub extern "C" fn TP_ADJ(p: *mut c_void) -> *mut c_void
+{
+    (p as *mut c_char as uintptr_t + core::mem::size_of::<pthread>() + TP_OFFSET) as *mut c_void
+}
+
+pub const DEFAULT_STACK_SIZE: c_uint = 131072;
+pub const DEFAULT_GUARD_SIZE: c_uint = 8192;

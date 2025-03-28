@@ -267,3 +267,10 @@ pub extern "C" fn a_swap(p: *mut c_int, v: c_int) -> c_int {
 pub extern "C" fn a_spin() -> () {
     a_barrier();
 }
+
+#[inline(always)]
+#[no_mangle]
+pub extern "C" fn a_crash()
+{
+    core::ptr::write_volatile(0 as *mut c_int, 0);
+}

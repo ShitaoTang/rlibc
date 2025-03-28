@@ -60,6 +60,9 @@ pub mod __timedwait;
 pub mod __wait;
 pub mod vmlock;
 
+pub mod __set_thraed_area;
+pub mod default_attr;
+
 #[repr(C)]
 pub struct __ptcb {
     pub __f: extern "C" fn(*mut c_void) -> *mut c_void,
