@@ -14,6 +14,9 @@ pub const SCM_TIMESTAMP_OLD: c_int = SO_TIMESTAMP_OLD;
 pub const SCM_TIMESTAMPNS_OLD: c_int = SO_TIMESTAMPNS_OLD;
 pub const SCM_TIMESTAMPING_OLD: c_int = SO_TIMESTAMPING_OLD;
 
+pub const SYSCALL_RLIM_INFINITY: c_ulonglong = !0;
+pub const SYSCALL_MMAP2_UINT: c_ulonglong = 4096;
+
 #[no_mangle]
 pub extern "C" fn __alt_socketall(sys: c_int, cp: c_int,
                        a: syscall_arg_t, b: syscall_arg_t, c: syscall_arg_t,

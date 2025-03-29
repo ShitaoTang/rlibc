@@ -6,3 +6,4 @@ pub mod shgetc;
 pub mod intscan;
 pub mod dynlink;
 pub mod defsysinfo;
+pub mod lock;
