@@ -272,5 +272,5 @@ pub extern "C" fn a_spin() -> () {
 #[no_mangle]
 pub extern "C" fn a_crash()
 {
-    core::ptr::write_volatile(0 as *mut c_int, 0);
+    unsafe { core::ptr::write_volatile(0 as *mut c_int, 0)};
 }
