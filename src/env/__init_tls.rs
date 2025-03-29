@@ -63,9 +63,11 @@ pub unsafe extern "C" fn __copy_tls(mem: *mut c_uchar) -> *mut c_void
 
 if TLS_ABOVE_TP
 {
-    dtv = mem.offset(libc::libc.tls_size as isize).sub(libc::libc.tls_cnt + 1) as *mut uintptr_t;
+    dtv = ((mem as *mut u8).wrapping_offset(libc::libc.tls_size as isize) as *mut uintptr_t)
+        .wrapping_offset(-((libc::libc.tls_cnt + 1) as isize));
 
-    mem = mem.offset(-((mem as uintptr_t + core::mem::size_of::<pthread>() & (libc::libc.tls_align.wrapping_sub(1))) as isize));
+    mem = mem.offset(((mem as uintptr_t + core::mem::size_of::<pthread>()).wrapping_neg()
+        & libc::libc.tls_align.wrapping_sub(1)) as isize);
     td = mem as pthread_t;
     mem = mem.add(core::mem::size_of::<pthread>());
 
@@ -153,8 +155,8 @@ pub unsafe extern "C" fn init_tls(aux: *mut size_t)
 
 if TLS_ABOVE_TP {
     main_tls.offset = GAP_ABOVE_TP;
-    main_tls.offset += GAP_ABOVE_TP.wrapping_neg().wrapping_add(main_tls.image as uintptr_t)
-        & (main_tls.align.wrapping_sub(1));
+    main_tls.offset = main_tls.offset.wrapping_add(
+        (main_tls.image as usize).wrapping_sub(GAP_ABOVE_TP) & (main_tls.align.wrapping_sub(1)));
 } else {
     main_tls.offset = main_tls.size;
 }

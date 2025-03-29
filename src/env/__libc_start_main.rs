@@ -6,7 +6,6 @@ use crate::include::poll::pollfd;
 use crate::include::poll::POLLNVAL;
 #[cfg(target_arch = "aarch64")]
 use crate::include::time::timespec;
-// use core::sync::atomic::{compiler_fence, Ordering};
 use crate::exit::exit::*;
 use super::__environ;
 use crate::include::libc;
