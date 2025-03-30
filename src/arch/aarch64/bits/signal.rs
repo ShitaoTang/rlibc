@@ -1,3 +1,3 @@
 use crate::include::ctype::*;
 
-pub const _NSIG: c_int = 65;
+pub const _NSIG: size_t = 65;

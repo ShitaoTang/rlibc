@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
+use core::ptr;
 
-pub const UNGET: c_int = 8;
+pub const UNGET: size_t = 8;
 
 pub const F_PERM: c_uint = 1;
 pub const F_NORD: c_uint = 4;
@@ -15,7 +16,8 @@ pub struct _IO_FILE {
     pub flags: c_uint,
     pub rpos: *mut c_uchar,
     pub rend: *mut c_uchar,
-    pub close: *mut extern "C" fn(*mut FILE) -> c_int,
+    // pub close: *mut extern "C" fn(*mut FILE) -> c_int,
+    pub close: Option<extern "C" fn(*mut FILE) -> c_int>,
     pub wend: *mut c_uchar,
     pub wpos: *mut c_uchar,
     pub mustbezero1: *mut c_uchar,
@@ -35,7 +37,7 @@ pub struct _IO_FILE {
     pub lock_count: c_long,
     pub mode: c_int,
     pub lock: c_int,    // volatile
-    pub lbf: c_int,
+    pub lbf: c_int,     // line buffer
     pub cookie: *mut c_void,
     pub off: off_t,
     pub getln_buf: *mut c_char,
@@ -46,6 +48,44 @@ pub struct _IO_FILE {
     pub prev_locked: *mut FILE,
     pub next_locked: *mut FILE,
     pub locale: *mut __locale_struct,
+}
+
+impl Default for _IO_FILE {
+    fn default() -> Self {
+        _IO_FILE {
+            flags: 0,
+            rpos: ptr::null_mut(),
+            rend: ptr::null_mut(),
+            close: None,
+            wend: ptr::null_mut(),
+            wpos: ptr::null_mut(),
+            mustbezero1: ptr::null_mut(),
+            wbase: ptr::null_mut(),
+            read: None,
+            write: None,
+            seek: None,
+            buf: ptr::null_mut(),
+            buf_size: 0,
+            prev: ptr::null_mut(),
+            next: ptr::null_mut(),
+            fd: -1, // invalid value
+            pipe_pid: 0,
+            lock_count: 0,
+            mode: 0,
+            lock: 0,
+            lbf: 0,
+            cookie: ptr::null_mut(),
+            off: 0,
+            getln_buf: ptr::null_mut(),
+            mustbezero2: ptr::null_mut(),
+            shend: ptr::null_mut(),
+            shlim: 0,
+            shcnt: 0,
+            prev_locked: ptr::null_mut(),
+            next_locked: ptr::null_mut(),
+            locale: ptr::null_mut(),
+        }
+    }
 }
 
 // return 232 on 64-bit platform

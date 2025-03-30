@@ -160,16 +160,16 @@ pub unsafe extern "C" fn __libc_start_main_stage2(
     exit(main(argc, argv, envp));
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn memset(s: *mut u8, c: i32, n: usize) -> *mut u8 {
-    let mut ptr = s;
-    let val = c as u8;
-    for _ in 0..n {
-        *ptr = val;
-        ptr = ptr.add(1);
-    }
-    s
-}
+// #[no_mangle]
+// pub unsafe extern "C" fn memset(s: *mut u8, c: i32, n: usize) -> *mut u8 {
+//     let mut ptr = s;
+//     let val = c as u8;
+//     for _ in 0..n {
+//         *ptr = val;
+//         ptr = ptr.add(1);
+//     }
+//     s
+// }
 
 #[no_mangle]
 pub unsafe extern "C" fn bcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {

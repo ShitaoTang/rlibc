@@ -14,6 +14,9 @@ pub use self::x86_64::*;
 pub mod pthread_impl;
 pub mod pthread_self;
 
+pub mod pthread_create;
+pub mod pthread_key_create;
+
 pub mod pthread_mutex_init;
 pub mod pthread_mutex_lock;
 pub mod pthread_mutex_unlock;
@@ -56,9 +59,13 @@ pub mod pthread_setcancelstate;
 pub mod pthread_cancel;
 pub mod pthread_testcancel;
 
+pub mod lock_ptc;
+
 pub mod __timedwait;
 pub mod __wait;
 pub mod vmlock;
+pub mod __lock;
+pub mod __unmapself;
 
 pub mod __set_thraed_area;
 pub mod default_attr;

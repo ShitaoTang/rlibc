@@ -12,8 +12,8 @@ pub const _IOFBF: c_int = 0;
 pub const _IOLBF: c_int = 1;
 pub const _IONBF: c_int = 2;
 
-pub const BUFSIZ: c_uint = 1024;
-pub const FILENAME_MAX: c_uint = 4096;
-pub const FOPEN_MAX: c_uint = 1000;
-pub const TMP_MAX: c_uint = 10000;
-pub const L_tmpnam: c_uint = 20;
+pub const BUFSIZ: size_t = 1024;
+pub const FILENAME_MAX: size_t = 4096;
+pub const FOPEN_MAX: size_t = 1000;
+pub const TMP_MAX: size_t = 10000;
+pub const L_tmpnam: size_t = 20;

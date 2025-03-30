@@ -23,7 +23,7 @@ pub unsafe extern "C" fn __init_tp(p: *mut c_void) -> c_int
     (*td)._self = td;
     let r = __set_thread_area(TP_ADJ(p));
     if r<0 { return -1; }
-    if r!=0 { libc::libc.can_do_threads = 1 };
+    if r==0 { libc::libc.can_do_threads = 1 };
 
     (*td).detach_state = DT_STATUS::DT_JOINABLE as c_int;
     (*td).tid = __syscall1(SYS_set_tid_address as c_long,
