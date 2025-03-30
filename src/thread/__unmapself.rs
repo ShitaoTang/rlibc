@@ -67,7 +67,7 @@ pub unsafe extern "C" fn __unmapself(_base: *mut c_void, _size: size_t)
     asm!(
         "mov rax, 11",  // SYS_munmap
         "syscall",
-        "xor rdi, rdi"
+        "xor rdi, rdi",
         "mov rax, 60",  // SYS_exit
         "syscall",
     );

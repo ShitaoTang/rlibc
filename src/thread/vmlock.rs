@@ -14,9 +14,9 @@ pub unsafe extern "C" fn vm_wait() -> ()
 {
     let mut tmp = vmlock[0];
     loop {
+        if tmp == 0 {break;}
         wait(ptr::addr_of_mut!(vmlock) as *mut c_int, (ptr::addr_of_mut!(vmlock) as *mut c_int).add(1), tmp, 1);
         tmp = vmlock[0];
-        if tmp == 0 {break;}
     }
 }
 
