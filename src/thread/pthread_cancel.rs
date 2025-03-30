@@ -6,6 +6,7 @@ use super::syscall_cp::*;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::thread::pthread_create::*;
 
 #[no_mangle]
 pub extern "C" fn testcancel() -> ()
@@ -26,7 +27,7 @@ pub extern "C" fn cancel() -> c_long
     unsafe {
         if {ptr::read_volatile(ptr::addr_of!((*_self).canceldisable))} == PTHREAD_CANCEL_ENABLE as u8
         || {ptr::read_volatile(ptr::addr_of!((*_self).cancelasync))} != 0 {
-            libc::pthread_exit(PTHREAD_CANCELED);
+            pthread_exit(PTHREAD_CANCELED);
         }
     }
     unsafe{ptr::write_volatile(ptr::addr_of_mut!((*_self).canceldisable), PTHREAD_CANCEL_DISABLE as u8);}

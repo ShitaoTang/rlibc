@@ -1,6 +1,6 @@
 use crate::include::ctype::*;
-use crate::arch::syscall_arch::*;
-use crate::arch::syscall_bits::*;
+// use crate::arch::syscall_arch::*;
+// use crate::arch::syscall_bits::*;
 use core::arch::asm;
 
 /* The following is not for aarch64 and x86_64 */
