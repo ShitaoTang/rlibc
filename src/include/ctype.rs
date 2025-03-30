@@ -2,6 +2,7 @@ use core::ptr;
 use crate::thread::pthread_impl::pthread;
 use crate::internal::stdio_impl::*;
 use crate::cfg_if;
+use crate::arch::bits::signal::_NSIG;
 
 pub type c_schar = i8;
 pub type c_uchar = u8;
@@ -195,7 +196,6 @@ pub const __SU: usize = 1;
 
 pub const TP_OFFSET: usize = 0;
 
-pub const _NSIG: usize = 65;
 #[cfg(target_pointer_width = "64")]
 pub const SIGPT_SET_VALUE: [c_ulong; _NSIG/8/8] = [3u64 << 32];
 #[cfg(target_pointer_width = "32")]
