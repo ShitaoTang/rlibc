@@ -12,3 +12,7 @@ pub mod __stdio_seek;
 pub mod stdin;
 pub mod stdout;
 pub mod stderr;
+
+pub mod ftrylockfile;
+
+pub mod dlerror;
