@@ -9,7 +9,7 @@ pub extern "C" fn pthread_mutex_init(m: *mut pthread_mutex_t, a: *const pthread_
     }
 
     unsafe {
-        ptr::write(m, core::mem::zeroed::<pthread_mutex_t>());
+        core::ptr::write_bytes(m as *mut u8, 0, core::mem::size_of::<pthread_mutex_t>());
         assert_eq!((*m).__u.__i[0], 0);
         assert_eq!(ptr::read_volatile(&(*m).__u.__vi[1]), 0);
         assert_eq!(ptr::read_volatile(&(*m).__u.__vi[2]), 0);

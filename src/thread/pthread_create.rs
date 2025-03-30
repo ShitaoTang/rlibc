@@ -77,7 +77,7 @@ unsafe fn __tl_unlock()
     }
 }
 
-unsafe fn __tl_sync(_td: pthread_t)
+pub unsafe fn __tl_sync(_td: pthread_t)
 {
     a_barrier();
     let val = ptr::read_volatile(ptr::addr_of_mut!(__init_tls::__thread_list_lock));

@@ -17,6 +17,8 @@ pub mod pthread_self;
 pub mod pthread_create;
 pub mod pthread_key_create;
 
+pub mod pthread_join;
+
 pub mod pthread_mutex_init;
 pub mod pthread_mutex_lock;
 pub mod pthread_mutex_unlock;
