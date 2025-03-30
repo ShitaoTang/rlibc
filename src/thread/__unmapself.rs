@@ -3,6 +3,8 @@ use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
 use core::arch::asm;
 
+/* The following is not for aarch64 and x86_64 */
+/*
 static mut unmap_base: *mut c_void = core::ptr::null_mut();
 static mut unmap_size: size_t = 0;
 static mut shared_stack: [c_char; 256] = [0; 256];
@@ -42,5 +44,31 @@ pub unsafe extern "C" fn __unmapself(base: *mut c_void, size: size_t)
         in (reg) stack,
         clobber_abi("C"), 
         options(noreturn)
+    );
+}
+*/
+
+#[cfg(target_arch = "aarch64")]
+#[no_mangle]
+pub unsafe extern "C" fn __unmapself(_base: *mut c_void, _size: size_t)
+{
+    asm!(
+        "mov x8, 215",  // SYS_munmap
+        "svc 0",
+        "mov x8, 93",   // SYS_exit
+        "svc 0",
+    );
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+pub unsafe extern "C" fn __unmapself(_base: *mut c_void, _size: size_t)
+{
+    asm!(
+        "mov rax, 11",  // SYS_munmap
+        "syscall",
+        "xor rdi, rdi"
+        "mov rax, 60",  // SYS_exit
+        "syscall",
     );
 }
