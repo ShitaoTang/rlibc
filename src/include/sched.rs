@@ -1,5 +1,22 @@
 use crate::include::ctype::*;
 
+#[repr(C)]
+pub struct reversed2_s {
+    pub __reversed1: time_t,
+    pub __reversed2: c_long,
+}
+
+#[repr(C)]
+pub struct sched_param {
+    pub sched_priority: c_int,
+    pub __reserved: c_int,
+    #[cfg(target_arch = "x86_64")]
+    pub __reserved2: [reversed2_s; 2],
+    #[cfg(target_arch = "aarch64")]
+    pub __reserved2: [reversed2_s; 2],
+    pub __reserved3: c_int,
+}
+
 pub const SCHED_OTHER: c_int = 0;
 pub const SCHED_FIFO: c_int = 1;
 pub const SCHED_RR: c_int = 2;

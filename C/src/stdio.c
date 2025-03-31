@@ -16,6 +16,19 @@ int printf_intern(int fd, const char *fmt, va_list args)
         }
 
         p++;
+        if (*p == 'l') {
+            p++;  
+            if (*p == 'd') {
+                long int num = va_arg(args_copy, long int);
+                len += ltoa(num, &buffer[len]);
+                continue;
+            } else {
+                buffer[len++] = '%';
+                buffer[len++] = 'l';
+                buffer[len++] = *p;
+                continue;
+            }
+        }
         switch (*p) {
         case 's': {
             char* s = va_arg(args_copy, char*);
@@ -66,4 +79,16 @@ int fdprintf(int fd, const char *fmt, ...)
 
     va_end(args);
     return ret;
+}
+
+int puts(const char *s)
+{
+    size_t len = rstrlen(s);
+    ssize_t written = write(1, s, len);
+    if (written < 0) return -1;
+
+    written = write(1, "\n", 1);
+    if (written < 0) return -1;
+
+    return 0;
 }

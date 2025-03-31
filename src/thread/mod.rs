@@ -14,20 +14,27 @@ pub use self::x86_64::*;
 pub mod pthread_impl;
 pub mod pthread_self;
 
+pub mod pthread_atfork;
 pub mod pthread_create;
 pub mod pthread_key_create;
 
 pub mod pthread_join;
+
+pub mod pthread_attr_destroy;
+pub mod pthread_attr_getdetachstate;
+pub mod pthread_attr_getguardsize;
+pub mod pthread_attr_get;
 
 pub mod pthread_mutex_init;
 pub mod pthread_mutex_lock;
 pub mod pthread_mutex_unlock;
 pub mod pthread_mutex_trylock;
 pub mod pthread_mutex_timedlock;
+pub mod pthread_mutex_destroy;
 
 pub mod pthread_spin_init;
 pub mod ptrhead_spin_lock;
-pub mod ptrhead_spin_destory;
+pub mod ptrhead_spin_destroy;
 pub mod ptrhead_spin_unlock;
 pub mod ptrhead_spin_trylock;
 
@@ -47,15 +54,16 @@ pub mod pthread_cond_wait;
 pub mod pthread_cond_timedwait;
 pub mod pthread_cond_destory;
 pub mod pthread_condattr_init;
-pub mod pthread_condattr_destory;
+pub mod pthread_condattr_destroy;
 pub mod pthread_condattr_setclock;
 pub mod pthread_condattr_setpshared;
 
 pub mod pthread_barrier_init;
 pub mod pthread_barrier_wait;
 pub mod pthread_barrierattr_init;
-pub mod pthread_barrierattr_destory;
+pub mod pthread_barrierattr_destroy;
 pub mod pthread_barrierattr_setpshared;
+pub mod pthread_barrier_destroy;
 
 pub mod pthread_setcancelstate;
 pub mod pthread_cancel;

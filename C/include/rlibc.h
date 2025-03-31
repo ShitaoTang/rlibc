@@ -18,6 +18,7 @@
 
 int rstrlen(const char *s);
 int itoa(int n, char *buf);
+int ltoa(long int n, char *buf);
 int printf(const char *fmt, ...);
 int fdprintf(int fd, const char *fmt, ...);
 ssize_t write(int fd, const void *buf, size_t count);

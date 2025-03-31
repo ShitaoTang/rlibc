@@ -28,6 +28,27 @@ int itoa(int n, char *buf)
     return i;
 }
 
+int ltoa(long int n, char *buf)
+{
+    char tmp[32]; 
+    int i = 0;
+    int neg = n < 0;
+    unsigned int num = neg ? -n : n;
+
+    do {
+        tmp[i++] = (num % 10) + '0';
+        num /= 10;
+    } while (num > 0);
+    if (neg) {
+        tmp[i++] = '-';
+    }
+
+    for (int j = 0; j < i; ++j) {
+        buf[j] = tmp[i-j-1];
+    }
+    return i;
+}
+
 ssize_t write(int fd, const void *buf, size_t count)
 {
     ssize_t ret;
