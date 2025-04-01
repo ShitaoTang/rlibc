@@ -240,11 +240,13 @@ pub struct pthread_mutexattr_t {
 pub type pthread_spinlock_t = c_int;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct pthread_rwlock_t {
     pub __u: ptrwu,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union ptrwu {
     #[cfg(target_pointer_width = "64")]
     pub __i: [c_int; 14],
@@ -335,6 +337,10 @@ impl pthread_barrier_t {
 pub struct pthread_barrierattr_t {
     pub __attr: c_uint,
 }
+
+pub type pthread_key_t = c_uint;
+
+pub type pthread_once_t = c_int;
 
 #[repr(C)]
 pub struct __locale_map;

@@ -17,13 +17,19 @@ pub mod pthread_self;
 pub mod pthread_atfork;
 pub mod pthread_create;
 pub mod pthread_key_create;
-
+pub mod pthread_detach;
+pub mod pthread_equal;
+pub mod pthread_getspecific;
 pub mod pthread_join;
+pub mod pthread_once;
+pub mod pthread_cleanup_push;
+
 
 pub mod pthread_attr_destroy;
-pub mod pthread_attr_getdetachstate;
-pub mod pthread_attr_getguardsize;
+pub mod pthread_attr_setdetachstate;
+pub mod pthread_attr_setguardsize;
 pub mod pthread_attr_get;
+pub mod pthread_attr_setschedparam;
 
 pub mod pthread_mutex_init;
 pub mod pthread_mutex_lock;
@@ -31,13 +37,19 @@ pub mod pthread_mutex_unlock;
 pub mod pthread_mutex_trylock;
 pub mod pthread_mutex_timedlock;
 pub mod pthread_mutex_destroy;
+pub mod pthread_mutex_consistent;
+pub mod pthread_mutexattr_destory;
+pub mod pthread_mutexattr_init;
+pub mod pthread_mutexattr_setrobust;
+pub mod pthread_mutexattr_settype;
 
 pub mod pthread_spin_init;
-pub mod ptrhead_spin_lock;
-pub mod ptrhead_spin_destroy;
-pub mod ptrhead_spin_unlock;
-pub mod ptrhead_spin_trylock;
+pub mod pthread_spin_lock;
+pub mod pthread_spin_destroy;
+pub mod pthread_spin_unlock;
+pub mod pthread_spin_trylock;
 
+pub mod pthread_rwlock_destroy;
 pub mod pthread_rwlock_init;
 pub mod pthread_rwlock_rdlock;
 pub mod pthread_rwlock_wrlock;
@@ -46,6 +58,8 @@ pub mod pthread_rwlock_tryrdlock;
 pub mod pthread_rwlock_trywrlock;
 pub mod pthread_rwlock_timedrdlock;
 pub mod pthread_rwlock_timedwrlock;
+pub mod pthread_rwlockattr_init;
+pub mod pthread_rwlockattr_destroy;
 
 pub mod pthread_cond_init;
 pub mod pthread_cond_broadcast;
@@ -68,6 +82,8 @@ pub mod pthread_barrier_destroy;
 pub mod pthread_setcancelstate;
 pub mod pthread_cancel;
 pub mod pthread_testcancel;
+pub mod pthread_setcanceltype;
+pub mod pthread_setspecific;
 
 pub mod lock_ptc;
 
@@ -82,19 +98,15 @@ pub mod default_attr;
 
 #[repr(C)]
 pub struct __ptcb {
-    pub __f: extern "C" fn(*mut c_void) -> *mut c_void,
+    pub __f: Option<unsafe extern "C" fn(*mut c_void)>,
     pub __x: *mut c_void,
     pub __next: *mut __ptcb,
-}
-
-extern "C" fn default_fn(_: *mut c_void) -> *mut c_void {
-    ptr::null_mut()
 }
 
 impl __ptcb {
     pub fn new() -> Self {
         __ptcb {
-            __f: default_fn,
+            __f: None,
             __x: ptr::null_mut(),
             __next: ptr::null_mut(),
         }
@@ -135,3 +147,15 @@ pub const PTHREAD_CANCEL_DEFERRED: c_int = 0;
 pub const PTHREAD_CANCEL_ASYNCHRONOUS: c_int = 1;
 
 pub const PTHREAD_BARRIER_SERIAL_THREAD: c_int = -1;
+
+pub const PTHREAD_RWLOCK_INITIALIZER: pthread_rwlock_t = pthread_rwlock_t {
+    __u: unsafe { core::mem::zeroed() }
+};
+
+pub const PTHREAD_COND_INITIALIZER: pthread_cond_t = pthread_cond_t {
+    __u: unsafe { core::mem::zeroed() }
+};
+
+pub const PTHREAD_MUTEX_INITIALIZER: pthread_mutex_t = pthread_mutex_t {
+    __u: unsafe { core::mem::zeroed() }
+};

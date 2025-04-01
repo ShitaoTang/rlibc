@@ -24,6 +24,7 @@ use crate::stdio::dlerror::*;
 use crate::string::memcpy::*;
 use crate::string::memset::*;
 use crate::thread::vmlock::vm_wait;
+use super::*;
 use super::__wait::wait;
 use super::default_attr::*;
 use super::pthread_self::*;
@@ -42,7 +43,7 @@ use super::__unmapself::*;
 static mut tl_lock_count: c_int = 0;
 static mut tl_lock_waiters: c_int = 0;
 
-unsafe fn __tl_lock()
+pub unsafe fn __tl_lock()
 {
     let tid = (*pthread_self()).tid;
     let mut val = ptr::read_volatile(ptr::addr_of_mut!(__init_tls::__thread_list_lock));
@@ -61,7 +62,7 @@ unsafe fn __tl_lock()
     }
 }
 
-unsafe fn __tl_unlock()
+pub unsafe fn __tl_unlock()
 {
     if tl_lock_count != 0 {
         tl_lock_count -= 1;
@@ -118,7 +119,9 @@ pub unsafe extern "C" fn pthread_exit(result: *mut c_void)
         let f = (*(*_self).cancelbuf).__f;
         let x = (*(*_self).cancelbuf).__x;
         (*_self).cancelbuf = (*(*_self).cancelbuf).__next;
-        f(x);
+        if let Some(f) = f {
+            f(x);
+        }
     }
 
     __pthread_tsd_run_dtors();
@@ -212,6 +215,19 @@ pub unsafe extern "C" fn pthread_exit(result: *mut c_void)
 fn ROUND(x: size_t) -> size_t
 {
     (x + PAGE_SIZE - 1) & PAGE_SIZE.wrapping_neg()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn __do_cleanup_push(cb: *mut __ptcb)
+{
+    (*cb).__next = (*pthread_self()).cancelbuf;
+    (*pthread_self()).cancelbuf = cb;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn __do_cleanup_pop(cb: *mut __ptcb)
+{
+    (*pthread_self()).cancelbuf = (*cb).__next;
 }
 
 #[repr(C)]
