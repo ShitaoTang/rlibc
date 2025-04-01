@@ -77,7 +77,7 @@ ssize_t write(int fd, const void *buf, size_t count)
      * Arch         arg1             ...         arg6
      * arm64        x0    x1    x2    x3    x4    x5
      */
-    __asm__ volatile {
+    __asm__ volatile (
         "mov x0, %1\n"
         "mov x1, %2\n"
         "mov x2, %3\n"
@@ -87,7 +87,7 @@ ssize_t write(int fd, const void *buf, size_t count)
         : "=r" (ret)
         : "r" ((long)fd), "r" (buf), "r" (count)
         : "%x0", "%x1", "%x2", "%x8"
-    }
+    );
 #else
     #error "Unsupported architecture"
 #endif

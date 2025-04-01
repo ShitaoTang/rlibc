@@ -5,7 +5,7 @@ use super::pthread_impl::wake;
 use super::__wait::*;
 
 #[no_mangle]
-pub extern "C" fn pthread_cond_destory(c: *mut pthread_cond_t) -> c_int
+pub extern "C" fn pthread_cond_destroy(c: *mut pthread_cond_t) -> c_int
 {
     if unsafe{(*c)._c_shared()} != ptr::null_mut() && unsafe{(*c)._c_waiters()} != 0 {
         let mut cnt: c_int;
