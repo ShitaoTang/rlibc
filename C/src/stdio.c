@@ -28,6 +28,17 @@ int printf_intern(int fd, const char *fmt, va_list args)
                 buffer[len++] = *p;
                 continue;
             }
+        } else if (*p == 'z') {
+            p++;
+            if (*p == 'u') {
+                size_t num = va_arg(args_copy, size_t);
+                if (sizeof(size_t) == sizeof(unsigned int)) {
+                    len += itoa((unsigned int)num, &buffer[len]); // 32-bit
+                } else {
+                    len += ltoa((unsigned long)num, &buffer[len]); // 64-bit
+                }
+                continue;
+            }
         }
         switch (*p) {
         case 's': {
@@ -91,4 +102,14 @@ int puts(const char *s)
     if (written < 0) return -1;
 
     return 0;
+}
+
+int putchar(int c)
+{
+    return write(1, &c, 1);
+}
+
+void perror(const char *s)
+{
+    fdprintf(2, "%s\n", s);
 }

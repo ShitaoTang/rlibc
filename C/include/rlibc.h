@@ -22,6 +22,9 @@ int ltoa(long int n, char *buf);
 int printf(const char *fmt, ...);
 int fdprintf(int fd, const char *fmt, ...);
 ssize_t write(int fd, const void *buf, size_t count);
+int putchar(int c);
+void perror(const char *s);
+
 void __assert(const char *msg);
 void ___exit(int status);
 

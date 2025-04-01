@@ -305,11 +305,11 @@ pub struct pthread_condattr_t {
 
 #[repr(C)]
 pub struct pthread_barrier_t {
-    pub __u: pbtu,
+    pub __u: ptbu,
 }
 
 #[repr(C)]
-pub union pbtu {
+pub union ptbu {
     #[cfg(target_pointer_width = "64")]
     pub __i: [c_int; 8],
     #[cfg(target_pointer_width = "32")]

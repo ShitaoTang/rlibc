@@ -5,7 +5,17 @@ use crate::include::ctype::*;
 pub extern "C" fn pthread_cond_init(c: *mut pthread_cond_t, a: *const pthread_condattr_t) -> c_int
 {
     unsafe {
-        ptr::write(c, core::mem::zeroed::<pthread_cond_t>());
+        ptr::write(
+            c,
+            pthread_cond_t {
+                __u: ptcu {
+                    #[cfg(target_pointer_width = "64")]
+                    __i: [0; 12],
+                    #[cfg(target_pointer_width = "32")]
+                    __i: [0; 6],
+                },
+            },
+        );
         assert_eq!(ptr::read_volatile(&(*c).__u.__p[0]), ptr::null_mut());
         assert_eq!(ptr::read_volatile(&(*c).__u.__vi[2]), 0);
         assert_eq!(ptr::read_volatile(&(*c).__u.__vi[3]), 0);

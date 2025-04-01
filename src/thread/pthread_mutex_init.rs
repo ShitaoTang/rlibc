@@ -9,7 +9,17 @@ pub extern "C" fn pthread_mutex_init(m: *mut pthread_mutex_t, a: *const pthread_
     }
 
     unsafe {
-        core::ptr::write_bytes(m as *mut u8, 0, core::mem::size_of::<pthread_mutex_t>());
+        core::ptr::write(
+            m,
+            pthread_mutex_t {
+                __u: ptmu {
+                    #[cfg(target_pointer_width = "64")]
+                    __i: [0; 10],
+                    #[cfg(target_pointer_width = "32")]
+                    __i: [0; 6],
+                },
+            },
+        );
         assert_eq!((*m).__u.__i[0], 0);
         assert_eq!(ptr::read_volatile(&(*m).__u.__vi[1]), 0);
         assert_eq!(ptr::read_volatile(&(*m).__u.__vi[2]), 0);
