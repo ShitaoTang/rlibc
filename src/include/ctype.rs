@@ -358,6 +358,7 @@ pub type __time_t = c_long;
 pub type time_t = __time_t;
 pub type __suseconds_t = c_long;
 pub type suseconds_t = __suseconds_t;
+pub type clock_t = c_long;
 
 pub type off_t = c_long;
 
