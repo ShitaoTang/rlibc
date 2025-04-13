@@ -7,3 +7,4 @@ pub mod intscan;
 pub mod dynlink;
 pub mod defsysinfo;
 pub mod lock;
+pub mod procfdname;

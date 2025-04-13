@@ -63,3 +63,11 @@ pub const S_IROTH:  mode_t = 0o004;
 pub const S_IWOTH:  mode_t = 0o002;
 pub const S_IXOTH:  mode_t = 0o001;
 pub const S_IRWXO:  mode_t = 0o007;
+
+pub const AT_NO_AUTOMOUNT:       c_int = 0x800;
+pub const AT_EMPTY_PATH:         c_int = 0x1000;
+pub const AT_STATX_SYNC_TYPE:    c_int = 0x6000;
+pub const AT_STATX_SYNC_AS_STAT: c_int = 0x0000;
+pub const AT_STATX_FORCE_SYNC:   c_int = 0x2000;
+pub const AT_STATX_DONT_SYNC:    c_int = 0x4000;
+pub const AT_RECURSIVE:          c_int = 0x8000;

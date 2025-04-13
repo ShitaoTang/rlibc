@@ -8,3 +8,7 @@ pub const PTHREAD_DESTRUCTOR_ITERATIONS: size_t = 4;
 pub const PAGE_SIZE: size_t = 4096;
 #[cfg(target_arch = "aarch64")]
 pub const PAGE_SIZE: size_t = 4096;
+
+pub const NAME_MAX: size_t = 255;
+pub const PATH_MAX: size_t = 4096;
+pub const TZNAME_MAX: size_t = 6;

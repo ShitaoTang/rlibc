@@ -1,5 +1,6 @@
 use crate::include::ctype::*;
 use crate::arch::syscall_arch::*;
+use crate::arch::syscall_bits::*;
 use crate::thread::pthread_cancel::*;
 use super::syscall_ret::*;
 use crate::arch::generic::bits::errno::*;
@@ -16,6 +17,9 @@ pub const SCM_TIMESTAMPING_OLD: c_int = SO_TIMESTAMPING_OLD;
 
 pub const SYSCALL_RLIM_INFINITY: c_ulonglong = !0;
 pub const SYSCALL_MMAP2_UINT: c_ulonglong = 4096;
+
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub const SYS_fstatat: c_int = SYS_newfstatat;
 
 #[no_mangle]
 pub extern "C" fn __alt_socketall(sys: c_int, cp: c_int,

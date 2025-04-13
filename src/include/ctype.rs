@@ -4,6 +4,8 @@ use crate::internal::stdio_impl::*;
 use crate::cfg_if;
 use crate::arch::bits::signal::*;
 
+use super::time::timespec;
+
 pub type c_schar = i8;
 pub type c_uchar = u8;
 pub type c_short = i16;
@@ -369,5 +371,148 @@ pub type mode_t = c_uint;
 pub type FILE = _IO_FILE;
 
 pub type dev_t = c_ulong;
-
 pub type ino_t = c_ulong;
+pub type nlink_t = c_ulong;
+pub type uid_t = c_uint;
+pub type gid_t = c_uint;
+pub type blksize_t = c_long;
+pub type blkcnt_t = c_long;
+
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+pub struct stat {
+    pub st_dev: dev_t,
+    pub st_ino: ino_t,
+    pub st_nlink: nlink_t,
+
+    pub st_mode: mode_t,
+    pub st_uid: uid_t,
+    pub st_gid: gid_t,
+    pub __pad0: c_uint,
+    pub st_rdev: dev_t,
+    pub st_size: off_t,
+    pub st_blksize: blksize_t,
+    pub st_blocks: blkcnt_t,
+
+    pub st_atim: timespec,
+    pub st_mtim: timespec,
+    pub st_ctim: timespec,
+    pub __unused: [c_long; 3],
+}
+
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
+pub struct stat {
+    pub st_dev: dev_t,
+    pub st_ino: ino_t,
+    pub st_mode: mode_t,
+    pub st_nlink: nlink_t,
+
+    pub st_uid: uid_t,
+    pub st_gid: gid_t,
+    pub st_rdev: dev_t,
+    pub __pad: c_ulong,
+    pub st_size: off_t,
+    pub st_blksize: blksize_t,
+    pub __pad2: c_int,
+    pub st_blocks: blkcnt_t,
+
+    pub st_atim: timespec,
+    pub st_mtim: timespec,
+    pub st_ctim: timespec,
+    pub __unused: [c_uint; 2],
+}
+
+#[cfg(target_arch = "x86_64")]
+impl stat {
+    pub fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl stat {
+    pub fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Default for stat {
+    fn default() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Default for stat {
+    fn default() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+pub struct kstat {
+    pub st_dev: dev_t,
+    pub st_ino: ino_t,
+    pub st_nlink: nlink_t,
+
+    pub st_mode: mode_t,
+    pub st_uid: uid_t,
+    pub st_gid: gid_t,
+    pub __pad0: c_uint,
+    pub st_rdev: dev_t,
+    pub st_size: off_t,
+    pub st_blksize: blksize_t,
+    pub st_blocks: blkcnt_t,
+
+    pub st_atim_sec: c_long,
+    pub st_atim_nsec: c_long,
+    pub st_mtim_sec: c_long,
+    pub st_mtim_nsec: c_long,
+    pub st_ctim_sec: c_long,
+    pub st_ctim_nsec: c_long,
+    pub __unused: [c_long; 3],
+}
+
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
+pub struct kstat {
+    pub st_dev: dev_t,
+    pub st_ino: ino_t,
+    pub st_mode: mode_t,
+    pub st_nlink: nlink_t,
+
+    pub st_uid: uid_t,
+    pub st_gid: gid_t,
+    pub st_rdev: dev_t,
+    pub __pad: c_ulong,
+    pub st_size: off_t,
+    pub st_blksize: blksize_t,
+    pub __pad2: c_int,
+    pub st_blocks: blkcnt_t,
+
+    pub st_atim_sec: c_long,
+    pub st_atim_nsec: c_long,
+    pub st_mtim_sec: c_long,
+    pub st_mtim_nsec: c_long,
+    pub st_ctim_sec: c_long,
+    pub st_ctim_nsec: c_long,
+    pub __unused: [c_uint; 2],
+}
+
+#[cfg(target_arch = "x86_64")]
+impl kstat {
+    pub fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl kstat {
+    pub fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
