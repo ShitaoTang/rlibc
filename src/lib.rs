@@ -24,6 +24,7 @@ pub mod stdlib;
 pub mod signal;
 pub mod mman;
 pub mod malloc;
+pub mod stat;
 
 pub mod linux;
 

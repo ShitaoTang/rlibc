@@ -47,7 +47,7 @@ pub extern "C" fn __secs_to_tm(t: c_longlong, tm: *mut tm) -> c_int
         return -1;
     }
 
-    /* Reject time_t values befor 1970- */
+    /* Reject time_t values before 1970- */
 
     secs = t - LEAPOCH;
     days = secs / SECS_PER_DAY;

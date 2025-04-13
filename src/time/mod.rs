@@ -9,11 +9,16 @@ pub mod difftime;
 pub mod strftime;
 pub mod time;
 pub mod __secs_to_tm;
+pub mod __year_to_secs;
+pub mod __month_to_secs;
+pub mod __tm_to_secs;
 pub mod gmtime;
 pub mod gmtime_r;
 pub mod localtime;
 pub mod localtime_r;
 pub mod mktime;
+pub mod __tz;
+pub mod __map_file;
 
 pub const CLOCKS_PER_SEC: c_long = 1000000;
 
