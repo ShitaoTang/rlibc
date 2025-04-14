@@ -1,6 +1,7 @@
 use crate::include::bit::isdigit;
 use crate::include::ctype::*;
 use crate::include::limits::*;
+use crate::include::time::tm;
 use crate::internal::lock::*;
 use crate::string::memcmp::memcmp;
 use crate::string::memcpy::*;
@@ -488,4 +489,20 @@ unsafe fn __dst(isdst: *mut c_int, offset: *mut c_long, zonename: *mut *const c_
     if !oppoff.is_null() { *oppoff = -__timezone as c_long; }
     *zonename = __tzname[1];
     UNLOCK(ptr::addr_of_mut!(lock) as *mut _ as *mut c_int);
+}
+
+#[no_mangle]
+pub unsafe fn __tm_to_tzname(tm: &tm) -> *const c_char
+{
+    let mut p = tm.__tm_zone as *const c_void;
+    LOCK(ptr::addr_of_mut!(lock) as *mut _ as *mut c_int);
+    do_tzset();
+    if p != __utc.as_ptr() as *const c_void
+     && p != __tzname[0] as *const c_void
+     && p != __tzname[1] as *const c_void
+     && (zi.is_null() || (p as uintptr_t) - (abbrevs as uintptr_t) >= abbrevs_end.offset_from(abbrevs) as uintptr_t) {
+        p = b"\0" as *const u8 as *const c_void;
+    }
+    UNLOCK(ptr::addr_of_mut!(lock) as *mut _ as *mut c_int);
+    p as *const c_char
 }
