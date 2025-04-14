@@ -1,5 +1,7 @@
 use crate::include::ctype::*;
 
+use crate::internal::locale_impl::__locale_struct;
+
 #[repr(C)]
 pub struct tls_module {
     pub next: *mut tls_module,

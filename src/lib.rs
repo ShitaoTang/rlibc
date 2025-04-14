@@ -25,6 +25,7 @@ pub mod signal;
 pub mod mman;
 pub mod malloc;
 pub mod stat;
+pub mod locale;
 
 pub mod linux;
 

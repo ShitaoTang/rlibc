@@ -1,4 +1,5 @@
 use crate::include::ctype::*;
+use crate::internal::locale_impl::locale_t;
 use super::*;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;

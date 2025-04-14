@@ -11,3 +11,6 @@ pub mod poll;
 pub mod sched;
 pub mod signal;
 pub mod limits;
+pub mod nl_types;
+pub mod langinfo;
+pub mod locale;

@@ -1,6 +1,7 @@
 use crate::arch::*;
 use crate::include::ctype::*;
 use crate::include::libc::tls_module;
+use crate::internal::locale_impl::__locale_struct;
 use crate::internal::defsysinfo;
 use crate::internal::dynlink::Phdr;
 use crate::string::memcpy::*;

@@ -344,17 +344,6 @@ pub type pthread_key_t = c_uint;
 
 pub type pthread_once_t = c_int;
 
-#[repr(C)]
-pub struct __locale_map;
-
-#[repr(C)]
-pub struct __locale_struct {
-    pub cat: [*const __locale_map; 6],
-}
-
-#[allow(non_camel_case_types)]
-pub type locale_t = *mut __locale_struct;
-
 pub type clockid_t = c_int;
 pub type __time_t = c_long;
 pub type time_t = __time_t;

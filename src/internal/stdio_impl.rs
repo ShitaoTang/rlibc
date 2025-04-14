@@ -1,5 +1,6 @@
 use crate::include::ctype::*;
 use core::ptr;
+use super::locale_impl::__locale_struct;
 
 pub const UNGET: size_t = 8;
 
