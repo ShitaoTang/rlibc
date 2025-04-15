@@ -24,6 +24,10 @@ pub mod inet_aton;
 pub mod inet_ntoa;
 pub mod inet_pton;
 pub mod inet_ntop;
+pub mod htonl;
+pub mod ntohl;
+pub mod htons;
+pub mod ntohs;
 
 type sa_family_t = c_ushort;
 type socklen_t = c_uint;
