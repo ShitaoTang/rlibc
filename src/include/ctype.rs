@@ -361,7 +361,10 @@ pub type FILE = _IO_FILE;
 
 pub type dev_t = c_ulong;
 pub type ino_t = c_ulong;
+#[cfg(target_arch = "x86_64")]
 pub type nlink_t = c_ulong;
+#[cfg(target_arch = "aarch64")]
+pub type nlink_t = c_uint;
 pub type uid_t = c_uint;
 pub type gid_t = c_uint;
 pub type blksize_t = c_long;

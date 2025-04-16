@@ -118,7 +118,7 @@ unsafe fn getname(d: *mut c_char, p: *mut *const c_char)
             *p = (*p).add(1);
         }
     } else {
-        while ((((*p).add(i).read()|32) - b'a' as c_char) as c_uint) < 26 {
+        while ((((*p).add(i).read()|32).wrapping_sub(b'a' as c_char)) as c_uint) < 26 {
             if i < TZNAME_MAX { d.add(i).write((*p).add(i).read()); }
             i += 1;
         }

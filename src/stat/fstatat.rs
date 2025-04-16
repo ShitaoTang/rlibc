@@ -109,8 +109,8 @@ unsafe fn fstatat_kstat(fd: c_int, path: *const c_char, st: *mut stat, flag: c_i
                         &mut kst as *mut kstat as c_long) as c_int;
                 }
                 #[cfg(target_arch = "aarch64")] {
-                    ret = __syscall2(SYS_lstat as c_long, buf.as_ptr() as c_long,
-                        &mut kst as *mut kstat as c_long) as c_int;
+                    ret = __syscall4(SYS_fstatat as c_long, AT_FDCWD as c_long,  buf.as_ptr() as c_long,
+                        &mut kst as *mut kstat as c_long, 0) as c_int;
                 }
             }
         }
