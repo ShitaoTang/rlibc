@@ -9,6 +9,8 @@ pub mod __stdio_close;
 pub mod __stdio_exit;
 pub mod __stdio_seek;
 
+pub mod __lockfile;
+
 pub mod stdin;
 pub mod stdout;
 pub mod stderr;

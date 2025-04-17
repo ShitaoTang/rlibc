@@ -85,6 +85,8 @@ pub mod pthread_testcancel;
 pub mod pthread_setcanceltype;
 pub mod pthread_setspecific;
 
+pub mod pthread_sigmask;
+
 pub mod lock_ptc;
 
 pub mod __timedwait;

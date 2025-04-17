@@ -15,3 +15,4 @@ pub mod nl_types;
 pub mod langinfo;
 pub mod locale;
 pub mod byteswap;
+pub mod aio;

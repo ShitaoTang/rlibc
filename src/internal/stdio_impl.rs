@@ -94,3 +94,5 @@ impl Default for _IO_FILE {
 pub extern "C" fn get_size_of_io_file() -> usize {
     core::mem::size_of::<_IO_FILE>()
 }
+
+pub const MAYBE_WAITERS: c_int = 0x40000000;

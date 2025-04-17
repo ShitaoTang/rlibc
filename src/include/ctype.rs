@@ -149,9 +149,22 @@ cfg_if! {
 #[repr(C)]
 pub struct sigset_t {
     #[cfg(target_pointer_width = "32")]
-    __val: [c_ulong; 32],
+    pub __bits: [c_ulong; 32],
     #[cfg(target_pointer_width = "64")]
-    __val: [c_ulong; 16],
+    pub __bits: [c_ulong; 16],
+}
+
+#[cfg(target_pointer_width = "32")]
+impl sigset_t {
+    pub fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+#[cfg(target_pointer_width = "64")]
+impl sigset_t {
+    pub fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
 }
 
 pub type syscall_arg_t = c_long;
@@ -507,4 +520,10 @@ impl kstat {
     pub fn new() -> Self {
         unsafe { core::mem::zeroed() }
     }
+}
+
+#[repr(C)]
+pub struct iovec {
+    pub iov_base: *mut c_void,
+    pub iov_len: size_t,
 }
