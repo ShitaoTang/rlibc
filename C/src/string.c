@@ -1,4 +1,4 @@
-#include "rlibc.h"
+#include <sys/types.h>
 
 int rstrlen(const char *s)
 {

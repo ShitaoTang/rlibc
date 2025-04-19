@@ -3,8 +3,10 @@ CFLAGS = -Wall -Wextra -nostdlib -fno-builtin -fno-stack-protector -no-pie -fPIC
 AR = ar
 RANLIB = ranlib
 
+TOP_DIR = ..
 SRC_DIR = src
-INCLUDE_DIR = include
+INCLUDE_DIR = $(TOP_DIR)/include
+OBJ_INCLUDE_DIR = $(TOP_DIR)/obj/include
 OBJ_DIR = obj
 LIB_DIR = lib
 TEST_DIR = test
@@ -27,20 +29,24 @@ endif
 
 .PHONY: all clean dirs
 
-all: dirs $(LIB) test run
+all: dirs bits_dir $(LIB)
 
 dirs:
 	@mkdir -p $(LIB_DIR) $(OBJ_DIR) $(TEST_DIR)
 
+bits_dir:
+	@mkdir -p $(INCLUDE_DIR)/bits
+	@cp -r $(TOP_DIR)/arch/$(ARCH)/bits/* $(INCLUDE_DIR)/bits/
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(OBJ_INCLUDE_DIR) -c $< -o $@
 
 $(LIB): $(OBJS)
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
 
 $(OBJ_DIR)/%.o: $(TEST_DIR)/%.c
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -I$(OBJ_INCLUDE_DIR) -c $< -o $@
 
 $(TEST_DIR)/%: $(OBJ_DIR)/%.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ $< -L$(LIB_DIR) -lrlibc_helper

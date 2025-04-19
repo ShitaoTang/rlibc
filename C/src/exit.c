@@ -1,6 +1,6 @@
-#include "../include/rlibc.h"
+#include "stdlib.h"
 
-void ___exit(int status)
+_Noreturn void ___exit(int status)
 {
 #ifdef __x86_64__
     __asm__ volatile (

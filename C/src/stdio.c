@@ -1,4 +1,8 @@
-#include "rlibc.h"
+#include "stdarg.h"
+#include "stddef.h"
+#include "string.h"
+#include "unistd.h"
+#include <sys/types.h>
 
 int printf_intern(int fd, const char *fmt, va_list args)
 {

@@ -1,0 +1,106 @@
+#!/bin/sh
+
+# 默认安装路径
+prefix="/usr/local/rlibc"
+includedir="$prefix/include"
+debug="0"
+target=""
+
+ARCH = 
+
+# 解析参数
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --prefix=*)
+            prefix="${1#*=}"
+            ;;
+        --enable-debug)
+            debug="1"
+            ;;
+        --target=*)
+            target="${1#*=}"
+            ;;
+        --help)
+            echo "Usage: ./configure [--prefix=DIR] [--enable-debug] [--target=TRIPLE]"
+            exit 0
+            ;;
+        *)
+            echo "❌ Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+echo "🔧 Configuring rlibc..."
+echo "📁 Install prefix: $prefix"
+if [ "$debug" = "1" ]; then
+    echo "🐞 Debug mode: ENABLED"
+else
+    echo "🚀 Debug mode: DISABLED"
+fi
+if [ -n "$target" ]; then
+    echo "🎯 Target triple: $target"
+else
+    echo "⚠️ No target triple specified (default will be used by cargo)"
+fi
+
+# 检测架构
+arch=$(uname -m)
+case "$arch" in
+    x86_64) arch_macro="__x86_64__" ;;
+    aarch64) arch_macro="__aarch64__" ;;
+    *)
+        echo "❌ Unsupported architecture: $arch" >&2
+        exit 1
+        ;;
+esac
+
+# 生成 specs 文件
+specs_dir="$prefix/lib"
+specs_file="$specs_dir/rlibc-gcc.specs"
+mkdir -p "$specs_dir" 2>/dev/null || {
+    echo "❌ Failed to create directory: $specs_dir" >&2
+    exit 1
+}
+
+# 写入 config.mak 供 Makefile 使用
+if ! cat > config.mak <<EOF
+prefix=$prefix
+includedir=$includedir
+ARCH=$arch
+DEBUG=$debug
+TARGET=$target
+EOF
+then
+    echo "❌ Failed to write config.mak" >&2
+    exit 1
+fi
+
+echo "✅ Generated config.mak"
+
+# 安装 rlibc-gcc 脚本
+bin_dir="$prefix/bin"
+wrapper_path="$bin_dir/rlibc-gcc"
+mkdir -p "$bin_dir" 2>/dev/null || {
+    echo "❌ Failed to create directory: $bin_dir" >&2
+    exit 1
+}
+
+if ! cat > "$wrapper_path" <<EOF
+#!/bin/sh
+exec \${REALGCC:-gcc} "\$@" -specs "$specs_file"
+EOF
+then
+    echo "❌ Failed to install rlibc-gcc to $wrapper_path" >&2
+    exit 1
+fi
+
+if ! chmod +x "$wrapper_path"; then
+    echo "❌ Failed to make rlibc-gcc executable at $wrapper_path" >&2
+    exit 1
+fi
+
+echo "✅ Installed rlibc-gcc wrapper at $wrapper_path"
+
+echo "🎉 Configuration complete. Run 'make && make install'"

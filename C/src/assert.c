@@ -1,4 +1,6 @@
-#include "../include/rlibc.h"
+#include "assert.h"
+#include "stdio.h"
+#include "stdlib.h"
 
 void __assert(const char *msg)
 {

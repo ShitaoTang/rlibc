@@ -6,6 +6,12 @@
 
 *.log
 
+lib/
+
+obj/
+
+*.mak
+
 target/
 
 C/test/*
