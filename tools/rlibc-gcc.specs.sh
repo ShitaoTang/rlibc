@@ -10,12 +10,6 @@ cat <<EOF
 *cc1:
 -D__aarch64__ -nostdinc -isystem $INCLUDEDIR
 
-*link_libgcc:
--L$LIBDIR
-
-*libgcc:
-librlibc.a librlibc_helper.a
-
 *lib:
 -lrlibc -lrlibc_helper
 
