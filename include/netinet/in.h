@@ -59,7 +59,10 @@ struct ipv6_mreq {
 #define IN6ADDR_ANY_INIT      { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 #define IN6ADDR_LOOPBACK_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 } } }
 
-extern const struct in6_addr in6addr_any, in6addr_loopback;
+// extern const struct in6_addr in6addr_any, in6addr_loopback;
+
+const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
 #define INET_ADDRSTRLEN  16
 #define INET6_ADDRSTRLEN 46

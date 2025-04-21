@@ -2,7 +2,7 @@ use crate::include::ctype::*;
 use core::ptr;
 use super::*;
 use super::pthread_self::*;
-use super::syscall_cp::*;
+use super::__syscall_cp_asm::*;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
@@ -33,6 +33,12 @@ pub extern "C" fn cancel() -> c_long
     unsafe{ptr::write_volatile(ptr::addr_of_mut!((*_self).canceldisable), PTHREAD_CANCEL_DISABLE as u8);}
     
     -ECANCELED as c_long
+}
+
+#[no_mangle]
+pub extern "C" fn __cancel() -> c_long
+{
+    cancel()
 }
 
 #[no_mangle]

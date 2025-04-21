@@ -20,6 +20,7 @@ static mut end: uintptr_t = 0;
 static mut cur: uintptr_t = 0;
 static mut mmap_step: c_uint = 0;
 
+#[no_mangle]
 unsafe fn traverses_stack_p(old: uintptr_t, new: uintptr_t) -> bool
 {
     let len: uintptr_t = 8<<20;

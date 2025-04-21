@@ -109,6 +109,7 @@ if TLS_ABOVE_TP
 }
 
 #[no_mangle]
+#[inline(never)]
 pub unsafe extern "C" fn init_tls(aux: *mut size_t)
 {
     let mut p: *mut c_uchar;

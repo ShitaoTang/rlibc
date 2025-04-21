@@ -72,7 +72,7 @@ build: dirs $(GENH) $(C_LIB) $(TOOL_LIBS)
 	$(CARGO) build $(BUILD_FLAG) $(TARGET_FLAG)
 	@cp $(RUST_LIB) $(RLIBC_LIBDIR)/
 
-ARCH_INCLUDE := arch/$(ARCH)/
+ARCH_INCLUDE := $(SRCDIR)/arch/$(ARCH)/
 
 .PHONY: install
 install:
@@ -85,11 +85,13 @@ install:
 	install -m644 $(TOOL_LIBS) $(DESTDIR)$(LIBDIR)/
 
 	install -d $(DESTDIR)$(INCLUDEDIR)
-	cp -r include/* $(DESTDIR)$(INCLUDEDIR)/
+	cp -r $(SRCDIR)/include/* $(DESTDIR)$(INCLUDEDIR)/
 	cp -r $(ARCH_INCLUDE)/* $(DESTDIR)$(INCLUDEDIR)/
+	cp -r $(SRCDIR)/arch/generic/* $(DESTDIR)$(INCLUDEDIR)/
+	rm $(DESTDIR)$(INCLUDEDIR)/bits/*.in
 
 	install -d $(DESTDIR)$(INCLUDEDIR)/bits
-	install -m644 obj/include/bits/*.h $(DESTDIR)$(INCLUDEDIR)/bits/
+	install -m644 $(SRCDIR)/obj/include/bits/*.h $(DESTDIR)$(INCLUDEDIR)/bits/
 
 .PHONY: clean
 clean:

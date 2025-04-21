@@ -94,9 +94,12 @@ pub mod __wait;
 pub mod vmlock;
 pub mod __lock;
 pub mod __unmapself;
+pub mod __syscall_cp_asm;
 
 pub mod __set_thraed_area;
 pub mod default_attr;
+
+pub mod clone;
 
 #[repr(C)]
 pub struct __ptcb {

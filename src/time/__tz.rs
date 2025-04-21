@@ -421,7 +421,8 @@ unsafe fn rule_to_secs(rule: *const c_int, year: c_int) -> c_longlong
     t
 }
 
-pub unsafe fn __secs_to_zone(
+#[no_mangle]
+pub unsafe extern "C" fn __secs_to_zone(
     t: c_longlong,
     local: c_int,
     isdst: *mut c_int,

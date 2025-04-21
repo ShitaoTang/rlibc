@@ -56,7 +56,7 @@ extern "C" fn safe_fini() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn _start_c(p: *mut c_long)
+pub unsafe extern "C" fn _start_c(p: *mut c_long) -> !
 {
     let argc = *p as c_int;
     let argv = p.add(1) as *mut *mut c_char;

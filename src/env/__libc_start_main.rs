@@ -52,13 +52,15 @@ pub unsafe extern "C" fn __init_libc(envp: *mut *mut c_char, pn: *mut c_char)
     if pn.is_null() { pn = "".as_ptr() as *mut c_char; }
     libc::__progname = pn;
     libc::__progname_full = pn;
+    let mut last_slash = pn;
     i = 0;
     while pn.add(i).read() != 0 {
         if pn.add(i).read() == '/' as c_char {
-            libc::__progname = pn.add(i + 1);
+            last_slash = pn.add(i + 1);
         }
         i += 1;
     }
+    libc::__progname = last_slash;
 
     init_tls(aux.as_mut_ptr());
     // stack protector does not support yet
@@ -120,7 +122,7 @@ pub unsafe extern "C" fn libc_start_init()
 }
 
 
-type lsm2_fn = unsafe extern "C" fn(
+type _lsm2_fn = unsafe extern "C" fn(
     main: extern "C" fn(c_int, *mut *mut c_char, *mut *mut c_char) -> c_int,
     argc: c_int,
     argv: *mut *mut c_char,
@@ -128,6 +130,7 @@ type lsm2_fn = unsafe extern "C" fn(
 // static mut libc_start_main_stage2: Option<lsm2_fn> = None;
 
 #[no_mangle]
+#[inline(never)]
 pub unsafe extern "C" fn __libc_start_main(
     main: extern "C" fn(c_int, *mut *mut c_char, *mut *mut c_char) -> c_int,
     argc: c_int,
@@ -135,29 +138,36 @@ pub unsafe extern "C" fn __libc_start_main(
     _init: Option<extern "C" fn()>,
     _fini: Option<extern "C" fn()>,
     _ldso: Option<extern "C" fn()>,
-) -> c_int {
+) -> ! {
     let envp: *mut *mut c_char = argv.add(argc as usize + 1) as *mut *mut c_char;
+    let main_fn = core::ptr::read_volatile(&main);
 
     __init_libc(envp, *argv as *mut c_char);
 
-    let stage2: lsm2_fn = __libc_start_main_stage2;
+    // let _stage2: lsm2_fn = __libc_start_main_stage2;
 
     // compiler_fence(Ordering::SeqCst);
     a_barrier();
 
-    unsafe { stage2(main, argc, argv) }
+    unsafe { __libc_start_main_stage2(main_fn, argc, argv) }
 }
 
 #[no_mangle]
+#[inline(never)]
 pub unsafe extern "C" fn __libc_start_main_stage2(
     main: extern "C" fn(c_int, *mut *mut c_char, *mut *mut c_char) -> c_int,
     argc: c_int,
     argv: *mut *mut c_char,
-) -> c_int {
+) -> ! {
     let envp = argv.add(argc as usize + 1) as *mut *mut c_char;
+    let main_fn = core::ptr::read_volatile(&main);
+
+    a_barrier();
+
     libc_start_init();
 
-    exit(main(argc, argv, envp));
+    let ret = main_fn(argc, argv, envp);
+    exit(ret);
 }
 
 // #[no_mangle]
