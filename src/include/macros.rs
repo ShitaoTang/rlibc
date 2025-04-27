@@ -1,4 +1,4 @@
-/// This is copied from libc crate.
+/// cfg_if MACRO is copied from libc crate.
 /// A macro for defining #[cfg] if-else statements.
 ///
 /// This is similar to the `if/elif` C preprocessor macro by allowing definition
@@ -60,5 +60,22 @@ macro_rules! cfg_if {
     // Internal macro to Apply a cfg attribute to a list of items
     (@__apply $m:meta, $($it:item)*) => {
         $(#[$m] $it)*
+    };
+}
+
+/// ### weak_alias! MACRO
+/// 
+/// This macro creates a weak alias for a symbol.
+/// 
+/// It should **`use core::arch::global_asm;`**
+/// 
+/// **Uasge**: `weak_alias!(__foo, foo)`
+#[macro_export]
+macro_rules! weak_alias {
+    ($src:ident, $alias:ident) => {
+        global_asm!(
+            concat!(".weak ", stringify!($alias)),
+            concat!(".equ ", stringify!($alias), ", ", stringify!($src))
+        );
     };
 }

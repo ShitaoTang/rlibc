@@ -16,15 +16,24 @@ use crate::env::get_env::*;
 use crate::include::libc;
 use crate::mman::munmap::*;
 use core::ptr;
+use core::arch::global_asm;
+use crate::weak_alias;
 
 unsafe fn malloc(size: size_t) -> *mut c_void
 {
     crate::malloc::lite_malloc::__simple_malloc(size)
 }
 
+#[no_mangle]
 static mut __timezone: c_long = 0;
+#[no_mangle]
 static mut __daylight: c_int = 0;
+#[no_mangle]
 static mut __tzname: [*mut c_char; 2] = [ptr::null_mut(); 2];
+
+weak_alias!(__timezone, timezone);
+weak_alias!(__daylight, daylight);
+weak_alias!(__tzname, tzname);
 
 static mut std_name: [c_char; TZNAME_MAX+1] = [0; TZNAME_MAX+1];
 static mut dst_name: [c_char; TZNAME_MAX+1] = [0; TZNAME_MAX+1];
@@ -491,6 +500,16 @@ unsafe fn __dst(isdst: *mut c_int, offset: *mut c_long, zonename: *mut *const c_
     *zonename = __tzname[1];
     UNLOCK(ptr::addr_of_mut!(lock) as *mut _ as *mut c_int);
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn __tzset()
+{
+    LOCK(__timezone_lockptr);
+    do_tzset();
+    UNLOCK(__timezone_lockptr);
+}
+
+weak_alias!(__tzset, tzset);
 
 #[no_mangle]
 pub unsafe fn __tm_to_tzname(tm: &tm) -> *const c_char
