@@ -1,4 +1,4 @@
-# Rust-based C Library (rlibc)
+# Rust libc (rlibc)
 
 rlibc is a portable POSIX C standard library written in Rust and is under heavy development.
 
