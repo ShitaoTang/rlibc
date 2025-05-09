@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
+use crate::__syscall;
 use crate::thread::pthread_cancel::*;
 use super::syscall_ret::*;
 use crate::arch::generic::bits::errno::*;
@@ -31,7 +32,8 @@ pub extern "C" fn __alt_socketall(sys: c_int, cp: c_int,
         if cp != 0 {
             r = __syscall_cp_c(sys as c_long, a, b, c, d, e, f);
         } else {
-            r = __syscall6(sys as c_long, a, b, c, d, e, f);
+            // r = __syscall6(sys as c_long, a, b, c, d, e, f);
+            r = __syscall!(sys, a, b, c, d, e, f);
         }
     }
     if r != -ENOSYS as c_long {

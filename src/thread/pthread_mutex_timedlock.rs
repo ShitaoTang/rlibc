@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
 use core::ptr;
 use crate::arch::atomic_arch::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use super::pthread_self::*;
 use super::pthread_mutex_trylock::*;
@@ -15,7 +16,8 @@ use super::*;
 pub extern "C" fn futex4(addr: *mut c_void, op: c_int, val: c_int, to: *const timespec) -> c_int
 {
     // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
-    let res = unsafe {__syscall4(SYS_futex as c_long, addr as c_long, op as c_long, val as c_long, to as c_long)};
+    // let res = unsafe {__syscall4(SYS_futex as c_long, addr as c_long, op as c_long, val as c_long, to as c_long)};
+    let res = __syscall!(SYS_futex, addr, op, val, to) as c_int;
     // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
     res as c_int
 }
@@ -48,8 +50,13 @@ pub extern "C" fn pthread_mutex_timedlock_pi(m: *mut pthread_mutex_t, at: *const
             0 => {
                 if (lock_type&4 == 0) && (unsafe{((*m)._m_lock() & 0x40000000 != 0) || (*m)._m_waiters() != 0}) {
                     a_store(unsafe{ptr::addr_of_mut!((*m).__u.__vi[2])}, -1);
-                    unsafe {__syscall2(SYS_futex as c_long, ptr::addr_of_mut!((*m).__u.__vi[1]) as *mut _ as c_long,
-                         (FUTEX_UNLOCK_PI | lock_priv) as c_long);}
+                    // unsafe {__syscall2(SYS_futex as c_long, ptr::addr_of_mut!((*m).__u.__vi[1]) as *mut _ as c_long,
+                    //      (FUTEX_UNLOCK_PI | lock_priv) as c_long);}
+                    __syscall!(
+                        SYS_futex,
+                        ptr::addr_of_mut!((*m).__u.__vi[1]) as *mut _,
+                        (FUTEX_UNLOCK_PI | lock_priv)
+                    );
                     unsafe {ptr::write_volatile(ptr::addr_of_mut!((*_self).robust_list.pending), ptr::null_mut())};
                     break 'block;
                 }

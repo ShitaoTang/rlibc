@@ -1,4 +1,5 @@
 use crate::cfg_if;
+use crate::__syscall;
 use crate::arch::syscall_bits::*;
 use crate::arch::syscall_arch::*;
 use crate::include::ctype::*;
@@ -16,7 +17,8 @@ unsafe fn __lseek(fd: c_int, offset: off_t, whence: c_int) -> off_t
 {
     if !def_SYS__llseek {
         __syscall_ret(
-            __syscall3(SYS_lseek as c_long, fd as c_long, offset as c_long, whence as c_long) as c_ulong
+            // __syscall3(SYS_lseek as c_long, fd as c_long, offset as c_long, whence as c_long) as c_ulong
+            __syscall!(SYS_lseek, fd, offset, whence) as c_ulong
         ) as off_t
     } else {
         0

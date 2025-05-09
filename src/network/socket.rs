@@ -3,6 +3,7 @@ use crate::internal::syscall_ret::__syscall_ret;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
+use crate::__syscall;
 use super::*;
 use crate::arch::generic::bits::fcntl::*;
 use crate::include::fcntl::*;
@@ -20,14 +21,17 @@ pub extern "C" fn socket(domain: c_int, stype: c_int, protocol: c_int) -> c_int
                          0, 0, 0) as c_int;
         if s < 0 {return __syscall_ret(s as u64) as c_int;}
         if (stype&SOCK_CLOEXEC)!=0 {
-            unsafe {
-                __syscall3(SYS_fcntl as c_long, s as c_long, F_SETFD as c_long, FD_CLOEXEC as c_long);
-            }
+            // unsafe {
+            //     __syscall3(SYS_fcntl as c_long, s as c_long, F_SETFD as c_long, FD_CLOEXEC as c_long);
+                
+            // }
+            __syscall!(SYS_fcntl, s, F_SETFD, FD_CLOEXEC);
         }
         if (stype&SOCK_NONBLOCK)!=0 {
-            unsafe {
-                __syscall3(SYS_fcntl as c_long, s as c_long, F_SETFL as c_long, O_NONBLOCK as c_long);
-            }
+            // unsafe {
+            //     __syscall3(SYS_fcntl as c_long, s as c_long, F_SETFL as c_long, O_NONBLOCK as c_long);
+            // }
+            __syscall!(SYS_fcntl, s, F_SETFL, O_NONBLOCK);
         }
     }
 

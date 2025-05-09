@@ -2,6 +2,7 @@ use crate::include::ctype::*;
 use core::ptr;
 use crate::arch::atomic_arch::*;
 use super::pthread_self::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
@@ -62,9 +63,14 @@ pub extern "C" fn pthread_mutex_trylock_owner(m: *mut pthread_mutex_t) -> c_int
                 // (*_self).robust_list.off = ((ptr::addr_of_mut!((*m).__u.__vi[1]) as usize) - (ptr::addr_of_mut!((*m).__u.__p[4]) as usize)) as c_long;
                 (*_self).robust_list.off = ((ptr::addr_of!((*m).__u.__vi) as *const i32).add(1) as *const u8)
                             .offset_from((ptr::addr_of!((*m).__u.__p) as *const *mut u8).add(4) as *const u8) as c_long;
-                __syscall2(SYS_set_robust_list as c_long,
-                     ptr::addr_of_mut!((*_self).robust_list) as c_long,
-                 (3* core::mem::size_of::<c_long>()) as c_long);
+                // __syscall2(SYS_set_robust_list as c_long,
+                //      ptr::addr_of_mut!((*_self).robust_list) as c_long,
+                //  (3* core::mem::size_of::<c_long>()) as c_long);
+                __syscall!(
+                    SYS_set_robust_list,
+                    ptr::addr_of_mut!((*_self).robust_list),
+                    (3 * core::mem::size_of::<c_long>())
+                );
             }
         }
         if unsafe {(*m)._m_waiters()} != 0 {tid |= c_int::MIN;}
@@ -88,9 +94,14 @@ fn success(m: *mut pthread_mutex_t, old: c_int, lock_type: c_int, _self: *mut pt
 {
     if (lock_type & 8) != 0 && unsafe { (*m)._m_waiters() } != 0 {
         let priv_flag = (lock_type & 128) ^ 128;
-        unsafe { __syscall2(SYS_futex as c_long,
-             ptr::addr_of!((*m).__u.__vi[1]) as c_long,
-             (FUTEX_UNLOCK_PI | priv_flag) as c_long); }
+        // unsafe { __syscall2(SYS_futex as c_long,
+        //      ptr::addr_of!((*m).__u.__vi[1]) as c_long,
+        //      (FUTEX_UNLOCK_PI | priv_flag) as c_long); }
+        __syscall!(
+            SYS_futex,
+            ptr::addr_of!((*m).__u.__vi[1]),
+            (FUTEX_UNLOCK_PI | priv_flag)
+        );
         unsafe { ptr::write_volatile(ptr::addr_of_mut!((*(*_self)).robust_list.pending), ptr::null_mut()); }
         return if (lock_type & 4) != 0 {
             ENOTRECOVERABLE

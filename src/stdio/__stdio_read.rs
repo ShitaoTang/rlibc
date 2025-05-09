@@ -1,5 +1,6 @@
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
+use crate::__syscall;
 use crate::include::ctype::*;
 use crate::internal::stdio_impl::*;
 use crate::internal::syscall_ret::__syscall_ret;
@@ -20,9 +21,11 @@ unsafe {
     ];
 
     let mut cnt = if iov[0].iov_len!=0 {
-        __syscall_ret(__syscall3(SYS_readv as c_long, (*f).fd as c_long, iov.as_ptr() as c_long, 2) as c_ulong) as ssize_t
+        // __syscall_ret(__syscall3(SYS_readv as c_long, (*f).fd as c_long, iov.as_ptr() as c_long, 2) as c_ulong) as ssize_t
+        __syscall_ret(__syscall!(SYS_readv, (*f).fd, iov.as_ptr(), 2) as c_ulong) as ssize_t
     } else {
-        __syscall_ret(__syscall3(SYS_read as c_long, (*f).fd as c_long, iov[1].iov_base as c_long, iov[1].iov_len as c_long) as c_ulong) as ssize_t
+        // __syscall_ret(__syscall3(SYS_read as c_long, (*f).fd as c_long, iov[1].iov_base as c_long, iov[1].iov_len as c_long) as c_ulong) as ssize_t
+        __syscall_ret(__syscall!(SYS_read, (*f).fd, iov[1].iov_base, iov[1].iov_len) as c_ulong) as ssize_t
     };
     if cnt <= 0 {
         (*f).flags |= if cnt!=0 {F_ERR} else {F_EOF};

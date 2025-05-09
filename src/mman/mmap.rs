@@ -1,6 +1,7 @@
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::SYS_mmap;
+use crate::__syscall;
 use crate::internal::syscall_ret::*;
 use crate::include::ctype::*;
 use crate::include::sys::mman::*;
@@ -37,26 +38,26 @@ pub unsafe extern "C" fn __mmap(
 
     #[cfg(target_arch = "x86_64")]
     {
-        ret = __syscall6(
+        ret = __syscall!(
             SYS_mmap as syscall_arg_t,
             start as syscall_arg_t,
             len as syscall_arg_t,
             prot as syscall_arg_t,
             flags as syscall_arg_t,
             fd as syscall_arg_t,
-            off as syscall_arg_t,
+            off as syscall_arg_t
         );
     }
     #[cfg(target_arch = "aarch64")]
     {
-        ret = __syscall6(
+        ret = __syscall!(
             SYS_mmap as syscall_arg_t,
             start as syscall_arg_t,
             len as syscall_arg_t,
             prot as syscall_arg_t,
             flags as syscall_arg_t,
             fd as syscall_arg_t,
-            off as syscall_arg_t,
+            off as syscall_arg_t
         );
     }
     if ret == -EPERM as c_long && start==core::ptr::null_mut()

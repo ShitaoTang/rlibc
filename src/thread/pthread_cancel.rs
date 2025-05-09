@@ -3,6 +3,7 @@ use core::ptr;
 use super::*;
 use super::pthread_self::*;
 use super::__syscall_cp_asm::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
@@ -54,7 +55,7 @@ pub unsafe extern "C" fn __syscall_cp_c(nr: syscall_arg_t,
 
     st = (*_self).canceldisable as c_int;
     if st != 0 && (st==PTHREAD_CANCEL_DISABLE || nr==SYS_close as c_long) {
-        return __syscall6(nr, u, v, w, x, y, z);
+        return __syscall!(nr, u, v, w, x, y, z);
     }
 
     // unsafe{if _self.is_null() { asm!("brk #0", options(noreturn)); }}

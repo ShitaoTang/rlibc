@@ -1,8 +1,9 @@
-use crate::arch::syscall_arch::__syscall4;
+use crate::__syscall;
+use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::SYS_rt_sigprocmask;
 use crate::include::ctype::*;
 use crate::arch::bits::signal::*;
-use crate::include::signal::SIG_BLOCK;
+use crate::include::signal::{SIG_BLOCK, SIG_SETMASK};
 
 #[cfg(target_pointer_width = "32")]
 const fn all_mask_values() -> &'static [c_ulong] {
@@ -46,27 +47,42 @@ const app_mask: &[c_ulong] = app_mask_values();
 
 pub unsafe fn __block_all_sigs(set: *mut c_void)
 {
-    let _ = __syscall4(SYS_rt_sigprocmask as c_long,
-        SIG_BLOCK as c_long,
-        all_mask.as_ptr() as c_long,
-        set as c_long,
-        (_NSIG/8) as c_long) as c_long;
+    // let _ = __syscall4(SYS_rt_sigprocmask as c_long,
+    //     SIG_BLOCK as c_long,
+    //     all_mask.as_ptr() as c_long,
+    //     set as c_long,
+    //     (_NSIG/8) as c_long) as c_long;
+    let _ = __syscall!(SYS_rt_sigprocmask,
+        SIG_BLOCK,
+        all_mask.as_ptr(),
+        set,
+        (_NSIG/8));
 }
 
 pub unsafe fn __block_app_sigs(set: *mut c_void)
 {
-    let _ = __syscall4(SYS_rt_sigprocmask as c_long,
-        SIG_BLOCK as c_long,
-        app_mask.as_ptr() as c_long,
-        set as c_long,
-        (_NSIG/8) as c_long) as c_long;
+    // let _ = __syscall4(SYS_rt_sigprocmask as c_long,
+    //     SIG_BLOCK as c_long,
+    //     app_mask.as_ptr() as c_long,
+    //     set as c_long,
+    //     (_NSIG/8) as c_long) as c_long;
+    let _ = __syscall!(SYS_rt_sigprocmask,
+        SIG_BLOCK,
+        app_mask.as_ptr(),
+        set,
+        (_NSIG/8));
 }
 
 pub unsafe fn __restore_sigs(set: *const c_void)
 {
-    let _ = __syscall4(SYS_rt_sigprocmask as c_long,
-        SIG_BLOCK as c_long,
-        set as c_long,
+    // let _ = __syscall4(SYS_rt_sigprocmask as c_long,
+    //     SIG_SETMASK as c_long,
+    //     set as c_long,
+    //     0,
+    //     (_NSIG/8) as c_long) as c_long;
+    let _ = __syscall!(SYS_rt_sigprocmask,
+        SIG_SETMASK,
+        set,
         0,
-        (_NSIG/8) as c_long) as c_long;
+        (_NSIG/8));
 }

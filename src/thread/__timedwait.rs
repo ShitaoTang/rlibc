@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
 use core::ptr;
 use crate::time::clock_gettime::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use super::pthread_setcancelstate::*;
 use super::*;
@@ -14,13 +15,15 @@ use crate::signal::sigaction;
 pub extern "C" fn futex4_cp(addr: *mut c_void, op: c_int, val: c_int, to: *const timespec) -> c_int
 {
     // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
-    let r: c_int = unsafe {
-        __syscall6(SYS_futex as c_long, addr as c_long, op as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int
-    };
+    // let r: c_int = unsafe {
+    //     __syscall6(SYS_futex as c_long, addr as c_long, op as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int
+    // };
+    let r = __syscall!(SYS_futex, addr, op, val, to, 0, 0) as c_int;
     if r != -ENOSYS {return r;}
     let tmp = (op as c_int) & !(FUTEX_PRIVATE as c_int);
     // unsafe{if addr.is_null() { asm!("brk #0", options(noreturn)); }}
-    unsafe {__syscall6(SYS_futex as c_long, addr as c_long, tmp as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int}
+    // unsafe {__syscall6(SYS_futex as c_long, addr as c_long, tmp as c_long, val as c_long, to as c_long, 0 as c_long, 0 as c_long) as c_int}
+    __syscall!(SYS_futex, addr, tmp, val, to, 0, 0) as c_int
 }
 
 pub extern "C" fn timedwait(addr: *mut c_int, val: c_int, clk: clockid_t, at: *const timespec, lock_priv: c_int) -> c_int
@@ -48,7 +51,7 @@ pub extern "C" fn timedwait_cp(addr: *mut c_int, val: c_int, clk: clockid_t, at:
 
     if at != ptr::null_mut() {
         if unsafe {(*at).tv_nsec} as u64 > 1000000000u64 {return EINVAL;}   
-        if clock_gettime(clk, &mut to) != 0 {return EINVAL;}
+        if __clock_gettime(clk, &mut to) != 0 {return EINVAL;}
         to.tv_sec = unsafe {(*at).tv_sec} - to.tv_sec;
         to.tv_nsec = unsafe {(*at).tv_nsec} - to.tv_nsec;
         if to.tv_nsec < 0 {

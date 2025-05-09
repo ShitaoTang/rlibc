@@ -79,3 +79,45 @@ macro_rules! weak_alias {
         );
     };
 }
+
+#[macro_export]
+macro_rules! __syscall {
+    ($nr:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe { __syscall0($nr as c_long) }
+    }};
+    ($nr:expr, $arg1:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe { __syscall1($nr as c_long, $arg1 as c_long) }
+    }};
+    ($nr:expr, $arg1:expr, $arg2:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe { __syscall2($nr as c_long, $arg1 as c_long, $arg2 as c_long) }
+    }};
+    ($nr:expr, $arg1:expr, $arg2:expr, $arg3:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe { __syscall3($nr as c_long, $arg1 as c_long, $arg2 as c_long, $arg3 as c_long) }
+    }};
+    ($nr:expr, $arg1:expr, $arg2:expr, $arg3:expr, $arg4:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe { __syscall4($nr as c_long, $arg1 as c_long, $arg2 as c_long, $arg3 as c_long, $arg4 as c_long) }
+    }};
+    ($nr:expr, $arg1:expr, $arg2:expr, $arg3:expr, $arg4:expr, $arg5:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe { __syscall5($nr as c_long, $arg1 as c_long, $arg2 as c_long, $arg3 as c_long, $arg4 as c_long, $arg5 as c_long) }
+    }};
+    ($nr:expr, $arg1:expr, $arg2:expr, $arg3:expr, $arg4:expr, $arg5:expr, $arg6:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe {
+            __syscall6(
+                $nr as c_long,
+                $arg1 as c_long,
+                $arg2 as c_long,
+                $arg3 as c_long,
+                $arg4 as c_long,
+                $arg5 as c_long,
+                $arg6 as c_long,
+            )
+        }
+    }};
+}

@@ -1,5 +1,6 @@
 use core::ptr;
-use crate::arch::syscall_arch::__syscall3;
+use crate::__syscall;
+use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
 use crate::include::ctype::*;
 use crate::internal::syscall_ret::__syscall_ret;
@@ -26,7 +27,8 @@ unsafe {
 
     loop {
         cnt = __syscall_ret(
-            __syscall3(SYS_writev as c_long, (*f).fd as c_long, iov as c_long, iovcnt as c_long) as c_ulong
+            // __syscall3(SYS_writev as c_long, (*f).fd as c_long, iov as c_long, iovcnt as c_long) as c_ulong
+            __syscall!(SYS_writev, (*f).fd, iov, iovcnt) as c_ulong
         ) as ssize_t;
         if cnt == rem as ssize_t {
             (*f).wend = (*f).buf.add((*f).buf_size);

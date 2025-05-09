@@ -8,7 +8,7 @@ pub extern "C" fn clock() -> clock_t
 {
     let mut ts: timespec = timespec { tv_sec: 0, tv_nsec: 0 };
     
-    if clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ptr::addr_of_mut!(ts)) != 0 {
+    if __clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ptr::addr_of_mut!(ts)) != 0 {
         return -1;
     }
 

@@ -1,5 +1,6 @@
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::SYS_brk;
+use crate::__syscall;
 use crate::include::ctype::*;
 use crate::include::libc;
 use crate::include::sys::mman::*;
@@ -63,7 +64,8 @@ pub unsafe extern "C" fn __simple_malloc(n: size_t) -> *mut c_void
         let mut req = (n - (end-cur)) + (PAGE_SIZE-1) & PAGE_SIZE.wrapping_neg();
 
         if cur == 0 {
-            brk = __syscall1(SYS_brk as c_long, 0) as uintptr_t;
+            // brk = __syscall1(SYS_brk as c_long, 0) as uintptr_t;
+            brk = __syscall!(SYS_brk, 0) as uintptr_t;
             brk += brk.wrapping_neg() & PAGE_SIZE - 1;
             cur = brk;
             end = brk;
@@ -71,7 +73,8 @@ pub unsafe extern "C" fn __simple_malloc(n: size_t) -> *mut c_void
 
         if brk==end && req < usize::MAX-brk
             && !traverses_stack_p(brk, brk+req)
-            && __syscall1(SYS_brk as c_long, (brk+req) as c_long) as usize == brk+req{
+            // && __syscall1(SYS_brk as c_long, (brk+req) as c_long) as usize == brk+req{
+            && __syscall!(SYS_brk, (brk+req) as c_long) as usize == brk+req {
             end += req;
             brk = end;
         } else {

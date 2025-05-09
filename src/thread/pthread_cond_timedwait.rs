@@ -1,5 +1,6 @@
 use crate::include::ctype::*;
 use core::ptr;
+use crate::__syscall;
 use crate::arch::atomic_arch::*;
 use crate::arch::syscall_arch::*;
 use super::*;
@@ -67,13 +68,15 @@ pub extern "C" fn unlock_requeue(l: *mut c_int, r: *mut c_int, w: c_int) -> ()
     if w != 0 {
         wake(l, 1, 1);
     } else {
-        unsafe {
-            let _ = 
-            __syscall5(SYS_futex as c_long, l as c_long, (FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long,
-             0 as c_long, 1 as c_long, r as c_long) != ENOSYS as c_long
-            || __syscall5(SYS_futex as c_long, l as c_long, FUTEX_REQUEUE as c_long,
-             0 as c_long, 1 as c_long, r as c_long) != 0;
-        };
+        // unsafe {
+        //     let _ = 
+        //     __syscall5(SYS_futex as c_long, l as c_long, (FUTEX_REQUEUE | FUTEX_PRIVATE) as c_long,
+        //      0 as c_long, 1 as c_long, r as c_long) != ENOSYS as c_long
+        //     || __syscall5(SYS_futex as c_long, l as c_long, FUTEX_REQUEUE as c_long,
+        //      0 as c_long, 1 as c_long, r as c_long) != 0;
+        // };
+        let _ = __syscall!(SYS_futex, l, (FUTEX_REQUEUE | FUTEX_PRIVATE), 0, 1, r) != -ENOSYS as c_long
+            || __syscall!(SYS_futex, l, FUTEX_REQUEUE, 0, 1, r) != 0;
     }
 }
 

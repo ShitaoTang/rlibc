@@ -1,5 +1,6 @@
 use crate::include::ctype::*;
 use core::ptr;
+use crate::__syscall;
 use crate::arch::atomic_arch::*;
 use crate::arch::syscall_arch::*;
 use super::__wait::*;
@@ -130,10 +131,12 @@ pub extern "C" fn pthread_barrier_wait(b: *mut pthread_barrier_t) -> c_int {
             }
             a_inc(ptr::addr_of_mut!((*inst).finished));
             while ptr::read_volatile(&(*inst).finished) == 1 {
-                let _ = __syscall4(SYS_futex as c_long, ptr::addr_of_mut!((*inst).finished) as c_long, 
-                            (FUTEX_WAIT | FUTEX_PRIVATE) as c_long, 1 as c_long, 0 as c_long) != -ENOSYS as c_long
-                     || __syscall4(SYS_futex as c_long, ptr::addr_of_mut!((*inst).finished) as c_long, 
-                            FUTEX_WAIT as c_long, 1 as c_long, 0 as c_long) != 0;
+                // let _ = __syscall4(SYS_futex as c_long, ptr::addr_of_mut!((*inst).finished) as c_long, 
+                //             (FUTEX_WAIT | FUTEX_PRIVATE) as c_long, 1 as c_long, 0 as c_long) != -ENOSYS as c_long
+                //      || __syscall4(SYS_futex as c_long, ptr::addr_of_mut!((*inst).finished) as c_long, 
+                //             FUTEX_WAIT as c_long, 1 as c_long, 0 as c_long) != 0;
+                let _ = __syscall!(SYS_futex, ptr::addr_of_mut!((*inst).finished), (FUTEX_WAIT | FUTEX_PRIVATE), 1, 0) != -ENOSYS as c_long
+                     || __syscall!(SYS_futex, ptr::addr_of_mut!((*inst).finished), FUTEX_WAIT, 1, 0) != 0;
             }
             return PTHREAD_BARRIER_SERIAL_THREAD;
         }

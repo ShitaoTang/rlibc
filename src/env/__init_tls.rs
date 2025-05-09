@@ -14,6 +14,7 @@ use crate::arch::syscall_bits::*;
 use crate::arch::atomic_arch::a_crash;
 use crate::include::elf::*;
 use crate::include::sys::mman::*;
+use crate::__syscall;
 
 pub static mut __thread_list_lock: c_int = 0;   // volatile
 
@@ -27,8 +28,7 @@ pub unsafe extern "C" fn __init_tp(p: *mut c_void) -> c_int
     if r==0 { libc::libc.can_do_threads = 1 };
 
     (*td).detach_state = DT_STATUS::DT_JOINABLE as c_int;
-    (*td).tid = __syscall1(SYS_set_tid_address as c_long,
-        core::ptr::addr_of_mut!(__thread_list_lock) as c_long) as c_int;
+    (*td).tid = __syscall!(SYS_set_tid_address, core::ptr::addr_of_mut!(__thread_list_lock)) as c_int;
     (*td).locale = core::ptr::addr_of_mut!(libc::libc.global_locale) as *const __locale_struct as *mut __locale_struct;
     (*td).robust_list.head = &mut (*td).robust_list.head as *mut _ as *mut c_void;
     (*td).sysinfo = defsysinfo::__sysinfo;
@@ -182,9 +182,15 @@ if TLS_ABOVE_TP {
     if libc::libc.tls_size > core::mem::size_of::<builtin_tls>() as size_t {
 #[cfg(target_os = "linux")]
 const SYS_mmap2: c_long = SYS_mmap as c_long;
-        mem = __syscall6(
+        // mem = __syscall6(
+        //     SYS_mmap2,
+        //     0, libc::libc.tls_size as c_long,
+        //     PROT_READ | PROT_WRITE,
+        //     MAP_ANONYMOUS | MAP_PRIVATE,
+        //     -1, 0) as *mut c_void;
+        mem = __syscall!(
             SYS_mmap2,
-            0, libc::libc.tls_size as c_long,
+            0, libc::libc.tls_size,
             PROT_READ | PROT_WRITE,
             MAP_ANONYMOUS | MAP_PRIVATE,
             -1, 0) as *mut c_void;

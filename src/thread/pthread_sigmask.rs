@@ -1,5 +1,6 @@
 use crate::arch::bits::signal::_NSIG;
 use crate::include::ctype::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
 use crate::include::signal::SIG_BLOCK;
@@ -12,12 +13,19 @@ pub unsafe extern "C" fn pthread_sigmask(how: c_int, set: *const sigset_t, old: 
         return EINVAL;
     }
 
-    let ret = -__syscall4(
-        SYS_rt_sigprocmask as c_long,
-        how as c_long,
-        set as c_long,
-        old as c_long,
-        _NSIG as c_long,
+    // let ret = -__syscall4(
+    //     SYS_rt_sigprocmask as c_long,
+    //     how as c_long,
+    //     set as c_long,
+    //     old as c_long,
+    //     _NSIG as c_long,
+    // );
+    let ret = __syscall!(
+        SYS_rt_sigprocmask,
+        how,
+        set,
+        old,
+        _NSIG
     );
     if ret==0 && !old.is_null() {
         if size_of::<c_ulong>() == 8 {

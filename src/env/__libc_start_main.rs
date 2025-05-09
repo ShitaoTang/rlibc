@@ -14,6 +14,7 @@ use crate::internal::defsysinfo;
 use super::__init_tls::init_tls;
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
+use crate::__syscall;
 #[cfg(target_arch = "aarch64")]
 use crate::arch::bits::signal::*;
 
@@ -76,22 +77,27 @@ pub unsafe extern "C" fn __init_libc(envp: *mut *mut c_char, pn: *mut c_char)
     ];
 
 #[cfg(target_arch = "x86_64")]
-    let r = __syscall3(SYS_poll as c_long, pfd.as_ptr() as c_long, 3, 0);
+    // let r = __syscall3(SYS_poll as c_long, pfd.as_ptr() as c_long, 3, 0);
+    let r = __syscall!(SYS_poll, pfd.as_ptr(), 3, 0);
 #[cfg(target_arch = "aarch64")]
-    let r = __syscall5(SYS_ppoll as c_long,
-        pfd.as_ptr() as c_long, 3,
-        &timespec { tv_sec: 0, tv_nsec: 0 } as *const timespec as c_long, 0, (_NSIG/8) as c_long);
+    // let r = __syscall5(SYS_ppoll as c_long,
+    //     pfd.as_ptr() as c_long, 3,
+    //     &timespec { tv_sec: 0, tv_nsec: 0 } as *const timespec as c_long, 0, (_NSIG/8) as c_long);
+    let r = __syscall!(SYS_ppoll, pfd.as_ptr(), 3,
+        &timespec { tv_sec: 0, tv_nsec: 0 } as *const timespec, 0, (_NSIG/8));
     if r<0 { a_crash(); }
     i = 0;
     while i < 3 {
         if (pfd[i].revents&POLLNVAL) != 0 {
             #[cfg(target_arch = "x86_64")]
-            if __syscall2(SYS_open as c_long, "/dev/null\0".as_ptr() as c_long, O_RDWR as c_long) < 0 {
+            // if __syscall2(SYS_open as c_long, "/dev/null\0".as_ptr() as c_long, O_RDWR as c_long) < 0 {
+            if __syscall!(SYS_open, "/dev/null\0".as_ptr(), O_RDWR) < 0 {
                 a_crash();
             }
             #[cfg(target_arch = "aarch64")]
-            if __syscall3(SYS_openat as c_long, AT_FDCWD as c_long,
-                "/dev/null\0".as_ptr() as c_long, O_RDWR as c_long) < 0 {
+            // if __syscall3(SYS_openat as c_long, AT_FDCWD as c_long,
+            //     "/dev/null\0".as_ptr() as c_long, O_RDWR as c_long) < 0 {
+            if __syscall!(SYS_openat, AT_FDCWD, "/dev/null\0".as_ptr(), O_RDWR) < 0 {
                 a_crash();
             }
         }

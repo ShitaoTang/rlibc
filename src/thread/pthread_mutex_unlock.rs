@@ -2,6 +2,7 @@ use crate::include::ctype::*;
 use core::ptr;
 use super::pthread_self::*;
 use crate::arch::atomic_arch::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use super::vmlock::*;
 use super::pthread_impl::*;
@@ -57,9 +58,10 @@ pub extern "C" fn pthread_mutex_unlock(m: *mut pthread_mutex_t) -> c_int
     if lock_type&8 != 0 {
         if old<0 || a_cas(unsafe{ptr::addr_of_mut!((*m).__u.__vi[1])}, old, new) != old {
             if new != 0 {a_store(unsafe{ptr::addr_of_mut!((*m).__u.__vi[2])}, -1);}
-            unsafe {__syscall2(SYS_futex as c_long,
-                 ptr::addr_of_mut!((*m).__u.__vi[1]) as c_long,
-                 (FUTEX_UNLOCK_PI | lock_priv) as c_long);}
+            // unsafe {__syscall2(SYS_futex as c_long,
+            //      ptr::addr_of_mut!((*m).__u.__vi[1]) as c_long,
+            //      (FUTEX_UNLOCK_PI | lock_priv) as c_long);}
+            __syscall!(SYS_futex, ptr::addr_of_mut!((*m).__u.__vi[1]), (FUTEX_UNLOCK_PI | lock_priv));   
         }
         cont = 0;
         waiters = 0;

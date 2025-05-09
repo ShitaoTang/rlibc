@@ -1,5 +1,6 @@
 use crate::arch::atomic_arch::*;
 use crate::arch::generic::bits::errno::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use crate::arch::syscall_bits::*;
 use crate::env::__init_tls;
@@ -191,8 +192,9 @@ pub unsafe extern "C" fn pthread_exit(result: *mut c_void)
         __block_all_sigs(ptr::addr_of_mut!(seg) as *mut c_void);
 
         if (*_self).robust_list.off!=0 {
-            __syscall2(SYS_set_robust_list as c_long,
-                0, 3*size_of::<c_long>() as c_long);
+            // __syscall2(SYS_set_robust_list as c_long,
+            //     0, 3*size_of::<c_long>() as c_long);
+            __syscall!(SYS_set_robust_list, 0, 3*size_of::<c_long>());
         }
 
         __unmapself((*_self).map_base as *mut c_void, (*_self).map_size);
@@ -206,7 +208,8 @@ pub unsafe extern "C" fn pthread_exit(result: *mut c_void)
     );
 
     loop {
-        __syscall1(SYS_exit as c_long, 0);
+        // __syscall1(SYS_exit as c_long, 0);
+        __syscall!(SYS_exit, 0);
     }
 
 }
@@ -248,15 +251,18 @@ unsafe extern "C" fn start(p: *mut c_void) -> c_int
             wait(ptr::addr_of_mut!((*args).control) as *mut c_int, ptr::null_mut(), 2, 1);
         }
         if (*args).control != 0 {
-            __syscall1(SYS_set_tid_address as c_long,
-                ptr::addr_of_mut!((*args).control) as c_long);
+            // __syscall1(SYS_set_tid_address as c_long,
+            //     ptr::addr_of_mut!((*args).control) as c_long);
+            __syscall!(SYS_set_tid_address, ptr::addr_of_mut!((*args).control));
             loop {
-                __syscall1(SYS_exit as c_long, 0);
+                // __syscall1(SYS_exit as c_long, 0);
+                __syscall!(SYS_exit, 0);
             }
         }
     }
-    __syscall4(SYS_rt_sigprocmask as c_long, SIG_SETMASK as c_long,
-        (*args).sigmask.as_mut_ptr() as c_long, 0, (_NSIG/8)as c_long);
+    // __syscall4(SYS_rt_sigprocmask as c_long, SIG_SETMASK as c_long,
+    //     (*args).sigmask.as_mut_ptr() as c_long, 0, (_NSIG/8)as c_long);
+    __syscall!(SYS_rt_sigprocmask, SIG_SETMASK, (*args).sigmask.as_mut_ptr(), 0, (_NSIG/8));
     pthread_exit(((*args).start_func)((*args).start_arg));
 
     0
@@ -309,8 +315,9 @@ pub unsafe extern "C" fn pthread_create(
         init_file_lock(__stdin_used);
         init_file_lock(__stdout_used);
         init_file_lock(__stderr_used);
-        __syscall4(SYS_rt_sigprocmask as c_long, SIG_UNBLOCK as c_long,
-            SIGPT_SET as c_long, 0, (_NSIG/8)as c_long);
+        // __syscall4(SYS_rt_sigprocmask as c_long, SIG_UNBLOCK as c_long,
+        //     SIGPT_SET as c_long, 0, (_NSIG/8)as c_long);
+        __syscall!(SYS_rt_sigprocmask, SIG_UNBLOCK, SIGPT_SET, 0, (_NSIG/8));
         (*_self).tsd = ptr::addr_of_mut!(__pthread_tsd_main) as *mut *mut c_void;
         #[cfg(target_os = "linux")]
         __membarrier_init();
@@ -420,10 +427,16 @@ pub unsafe extern "C" fn pthread_create(
     if ret < 0 {
         ret = -EAGAIN;
     } else if attr._a_sched()!=0 {
-        ret = __syscall3(SYS_sched_setscheduler as c_long,
-            (*new).tid as c_long,
-            attr._a_policy() as c_long,
-            ptr::addr_of_mut!((attr.__u.__i[3*__SU+3])) as c_long) as c_int;
+        // ret = __syscall3(SYS_sched_setscheduler as c_long,
+        //     (*new).tid as c_long,
+        //     attr._a_policy() as c_long,
+        //     ptr::addr_of_mut!((attr.__u.__i[3*__SU+3])) as c_long) as c_int;
+        ret = __syscall!(
+            SYS_sched_setscheduler,
+            (*new).tid,
+            attr._a_policy(),
+            ptr::addr_of_mut!((attr.__u.__i[3*__SU+3]))
+        ) as c_int;
         if a_swap(ptr::addr_of_mut!((*args).control), if ret!=0 {3} else {0}) == 2 {
             wake(ptr::addr_of_mut!((*args).control) as *mut c_int, 1, 1);
         }

@@ -8,6 +8,7 @@ use crate::internal::syscall::*;
 use crate::internal::procfdname::*;
 use crate::arch::syscall_bits::*;
 use crate::arch::syscall_arch::*;
+use crate::__syscall;
 use crate::include::time::timespec;
 use core::mem::{size_of, size_of_val};
 
@@ -56,9 +57,10 @@ unsafe fn fstatat_statx(fd: c_int, path: *const c_char, st: *mut stat, flag: c_i
 
     let mut flag = flag;
     flag |= AT_NO_AUTOMOUNT;
-    let ret = __syscall5(SYS_statx as c_long,
-        fd as c_long, path as c_long, flag as c_long,
-        0x7ff as c_long, &stx as *const statx as c_long) as c_int;
+    // let ret = __syscall5(SYS_statx as c_long,
+    //     fd as c_long, path as c_long, flag as c_long,
+    //     0x7ff as c_long, &stx as *const statx as c_long) as c_int;
+    let ret = __syscall!(SYS_statx, fd, path, flag, 0x7ff, &stx as *const statx) as c_int;
     if ret!=0 { return ret; }
 
     *st = stat {
@@ -97,37 +99,46 @@ unsafe fn fstatat_kstat(fd: c_int, path: *const c_char, st: *mut stat, flag: c_i
     let mut kst = kstat::new();
 
     if flag==AT_EMPTY_PATH && fd>=0 && *path==0 {
-        ret = __syscall2(SYS_fstat as c_long, fd as c_long, &mut kst as *mut kstat as c_long) as c_int;
-        if ret==-EBADF && __syscall2(SYS_fcntl as c_long, fd as c_long, F_GETFD as c_long)>=0 {
-            ret = __syscall4(SYS_fstatat as c_long, fd as c_long, path as c_long,
-                &mut kst as *mut kstat as c_long, flag as c_long) as c_int;
+        // ret = __syscall2(SYS_fstat as c_long, fd as c_long, &mut kst as *mut kstat as c_long) as c_int;
+        ret = __syscall!(SYS_fstat, fd, &mut kst as *mut kstat) as c_int;
+        // if ret==-EBADF && __syscall2(SYS_fcntl as c_long, fd as c_long, F_GETFD as c_long)>=0 {
+        if ret==-EBADF && __syscall!(SYS_fcntl, fd, F_GETFD)>=0 {
+            // ret = __syscall4(SYS_fstatat as c_long, fd as c_long, path as c_long,
+            //     &mut kst as *mut kstat as c_long, flag as c_long) as c_int;
+            ret = __syscall!(SYS_fstatat, fd, path, &mut kst as *mut kstat, flag) as c_int;
             if ret == -EINVAL {
                 let buf: [c_char; 15+3*size_of::<c_int>()] = [0; 15+3*size_of::<c_int>()];
                 __procfdname(buf.as_ptr() as *mut c_char, fd as c_uint);
                 #[cfg(target_arch = "x86_64")] {
-                    ret = __syscall2(SYS_stat as c_long, buf.as_ptr() as c_long,
-                        &mut kst as *mut kstat as c_long) as c_int;
+                    // ret = __syscall2(SYS_stat as c_long, buf.as_ptr() as c_long,
+                    //     &mut kst as *mut kstat as c_long) as c_int;
+                    ret = __syscall!(SYS_stat, buf.as_ptr(), &mut kst as *mut kstat) as c_int;
                 }
                 #[cfg(target_arch = "aarch64")] {
-                    ret = __syscall4(SYS_fstatat as c_long, AT_FDCWD as c_long,  buf.as_ptr() as c_long,
-                        &mut kst as *mut kstat as c_long, 0) as c_int;
+                    // ret = __syscall4(SYS_fstatat as c_long, AT_FDCWD as c_long,  buf.as_ptr() as c_long,
+                    //     &mut kst as *mut kstat as c_long, 0) as c_int;
+                    ret = __syscall!(SYS_fstatat, AT_FDCWD, buf.as_ptr(), &mut kst as *mut kstat, 0) as c_int;
                 }
             }
         }
     } else {
         #[cfg(target_arch = "x86_64")]
         if (fd==AT_FDCWD || *path==b'/' as c_char) && flag==AT_SYMLINK_NOFOLLOW {
-            ret = __syscall2(SYS_lstat as c_long, path as c_long, &mut kst as *mut kstat as c_long) as c_int;
+            // ret = __syscall2(SYS_lstat as c_long, path as c_long, &mut kst as *mut kstat as c_long) as c_int;
+            ret = __syscall!(SYS_lstat, path, &mut kst as *mut kstat) as c_int;
         } else if (fd==AT_FDCWD || *path==b'/' as c_char) && flag==0 {
-            ret = __syscall2(SYS_stat as c_long, path as c_long, &mut kst as *mut kstat as c_long) as c_int;
+            // ret = __syscall2(SYS_stat as c_long, path as c_long, &mut kst as *mut kstat as c_long) as c_int;
+            ret = __syscall!(SYS_stat, path, &mut kst as *mut kstat) as c_int;
         } else {
-            ret = __syscall4(SYS_fstatat as c_long, fd as c_long, path as c_long,
-                &mut kst as *mut kstat as c_long, flag as c_long) as c_int;
+            // ret = __syscall4(SYS_fstatat as c_long, fd as c_long, path as c_long,
+            //     &mut kst as *mut kstat as c_long, flag as c_long) as c_int;
+            ret = __syscall!(SYS_fstatat, fd, path, &mut kst as *mut kstat, flag) as c_int;
         }
 
         #[cfg(target_arch = "aarch64")] {
-            ret = __syscall4(SYS_fstatat as c_long, fd as c_long, path as c_long,
-                &mut kst as *mut kstat as c_long, flag as c_long) as c_int;
+            // ret = __syscall4(SYS_fstatat as c_long, fd as c_long, path as c_long,
+            //     &mut kst as *mut kstat as c_long, flag as c_long) as c_int;
+            ret = __syscall!(SYS_fstatat, fd, path, &mut kst as *mut kstat, flag) as c_int;
         }
     }
 

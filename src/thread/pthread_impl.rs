@@ -1,6 +1,7 @@
 use crate::include::ctype::*;
 use crate::internal::locale_impl::locale_t;
 use super::*;
+use crate::__syscall;
 use crate::arch::syscall_arch::*;
 use crate::arch::generic::bits::errno::*;
 use crate::arch::syscall_bits::*;
@@ -127,12 +128,14 @@ pub extern "C" fn wake(addr: *mut c_int, cnt: c_int, lock_priv: c_int) -> ()
 {
     let lock_priv = if lock_priv != 0 { FUTEX_PRIVATE } else { lock_priv };
     let cnt = if cnt < 0 { c_int::MAX } else { cnt };
-    unsafe {
-        let _ = __syscall3(SYS_futex as c_long, addr as c_long, 
-            (FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -ENOSYS as c_long
-        || __syscall3(SYS_futex as c_long, addr as c_long, FUTEX_WAKE as c_long, cnt as c_long) != 0;
-    };
-    
+    // unsafe {
+    //     let _ = __syscall3(SYS_futex as c_long, addr as c_long, 
+    //         (FUTEX_WAKE|lock_priv) as c_long, cnt as c_long) != -ENOSYS as c_long
+    //     || __syscall3(SYS_futex as c_long, addr as c_long, FUTEX_WAKE as c_long, cnt as c_long) != 0;
+    // };
+    let _ = __syscall!(SYS_futex, addr, (FUTEX_WAKE|lock_priv), cnt) != -ENOSYS as c_long
+        || __syscall!(SYS_futex, addr, FUTEX_WAKE, cnt) != 0;
+
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -158,21 +161,25 @@ pub const __ATTRP_C11_THREAD: *const c_void = usize::MAX as *const c_void;
 
 #[no_mangle]
 #[inline(always)]
-pub unsafe extern "C" fn __wake(addr: *mut c_void, cnt: c_int, _priv: c_int)
+pub extern "C" fn __wake(addr: *mut c_void, cnt: c_int, _priv: c_int)
 {
     let _priv = if _priv != 0 { FUTEX_PRIVATE } else { _priv };
     let cnt = if cnt < 0 { c_int::MAX } else { cnt };
-    let _ = __syscall3(SYS_futex as c_long, addr as c_long, (FUTEX_WAKE|_priv) as c_long, cnt as c_long) != -ENOSYS as c_long
-        || __syscall3(SYS_futex as c_long, addr as c_long, FUTEX_WAKE as c_long, cnt as c_long) != 0;
+    // let _ = __syscall3(SYS_futex as c_long, addr as c_long, (FUTEX_WAKE|_priv) as c_long, cnt as c_long) != -ENOSYS as c_long
+    //     || __syscall3(SYS_futex as c_long, addr as c_long, FUTEX_WAKE as c_long, cnt as c_long) != 0;
+    let _ = __syscall!(SYS_futex, addr, (FUTEX_WAKE|_priv), cnt) != -ENOSYS as c_long
+        || __syscall!(SYS_futex, addr, FUTEX_WAKE, cnt) != 0;
 }
 
 #[no_mangle]
 #[inline(always)]
-pub unsafe extern "C" fn __futexwait(addr: *mut c_void, val: c_int, _priv: c_int)
+pub extern "C" fn __futexwait(addr: *mut c_void, val: c_int, _priv: c_int)
 {
     let _priv = if _priv != 0 { FUTEX_PRIVATE } else { _priv };
-    let _ = __syscall4(SYS_futex as c_long, addr as c_long, (FUTEX_WAIT|_priv) as c_long, val as c_long, 0) != -ENOSYS as c_long
-        || __syscall4(SYS_futex as c_long, addr as c_long, FUTEX_WAIT as c_long, val as c_long, 0) != 0;
+    // let _ = __syscall4(SYS_futex as c_long, addr as c_long, (FUTEX_WAIT|_priv) as c_long, val as c_long, 0) != -ENOSYS as c_long
+    //     || __syscall4(SYS_futex as c_long, addr as c_long, FUTEX_WAIT as c_long, val as c_long, 0) != 0;
+    let _ = __syscall!(SYS_futex, addr, (FUTEX_WAIT|_priv), val, 0) != -ENOSYS as c_long
+        || __syscall!(SYS_futex, addr, FUTEX_WAIT, val, 0) != 0;
 }
 
 pub const SIGTIMER: size_t = 32;
