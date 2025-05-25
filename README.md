@@ -44,6 +44,7 @@ Currently, only **static linking** is supported.
 │   └── time/
 ├── arch/                  # architecture-specific headers
 ├── tools/
+├── test/                  # APIs tests
 ├── configure
 ├── Makefile
 ├── Cargo.toml
